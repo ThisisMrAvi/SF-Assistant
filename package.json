@@ -1,0 +1,102 @@
+{
+  "name": "sf-assistant",
+  "displayName": "Salesforce Assistant: SOQL Queries, Metadata Explorer & More",
+  "description": "Execute SOQL queries from VS Code, display results in a table, and export to CSV/JSON. Uses logged-in Salesforce org.",
+  "version": "1.0.2",
+  "icon": "assets/sf_assist_logo_round_128x.png",
+  "pricing": "Free",
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "Avinash Kumar"
+  },
+  "publisher": "thisismravi",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThisisMrAvi/SOQL-Assist"
+  },
+  "homepage": "https://github.com/ThisisMrAvi/SOQL-Assist/blob/master/README.md",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets",
+    "Linters",
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "salesforce",
+    "soql",
+    "sfdx",
+    "query",
+    "metadata explorer",
+    "data export"
+  ],
+  "sponsor": {
+    "url": "https://buymeacoffee.com/thisismravi"
+  },
+  "activationEvents": [
+    "onCommand:sf-assistant.runSoqlQuery"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "sf-assistant.runSoqlQuery",
+        "title": "SF Assistant: Run SOQL Query"
+      },
+      {
+        "command": "sf-assistant.metaExplorer",
+        "title": "SF Assistant: Object Explorer"
+      },
+      {
+        "command": "sf-assistant.clearCache",
+        "title": "SF Assistant: Clear Cache"
+      }
+    ],
+    "configuration": {
+      "title": "Salesforce Assistant Settings",
+      "description": "Settings for Salesforce Assistant extension.",
+      "type": "object",
+      "properties": {
+        "sf-assistant.apiVersion": {
+          "type": "number",
+          "default": 60,
+          "description": "API version"
+        },
+        "sf-assistant.cacheTTL": {
+          "type": "number",
+          "default": 12,
+          "description": "Time to cache data in hours (Default 12 hours)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "echo Compilation starting && webpack && echo Compilation finished",
+    "watch": "echo Compilation starting && webpack --watch && echo Compilation finished",
+    "package": "webpack --mode production --devtool hidden-source-map",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^8.39.0",
+    "@typescript-eslint/parser": "^8.39.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "copy-webpack-plugin": "^13.0.0",
+    "eslint": "^9.32.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.9.2",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
+  }
+}
