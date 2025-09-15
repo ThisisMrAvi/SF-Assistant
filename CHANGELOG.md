@@ -4,6 +4,18 @@ All notable changes to the "sf-assistant" extension will be documented in this f
 
 <!-- Check [Keep a Changelog](https://keepachangelog.com/) for recommendations on how to structure this file. -->
 
+## [2.0.0] - 2025-09-12
+
+### Added
+
+- **Object Explorer**: browse object metadata, fields, and child relationships.
+- **Navigation sidebar**: switch between SOQL Query and Object Explorer without reloading.
+
+### Fixed
+
+- Resolved issues in SOQL Query editor.
+- Fixed value suggestions for picklist
+
 ## [1.0.0] - 2025-09-02
 
 ### Added

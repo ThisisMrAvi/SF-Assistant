@@ -18,7 +18,7 @@
 
 ## 📸 Demo
 
-![SOQL Query Demo](https://github.com/ThisisMrAvi/SOQL-Assist/blob/master/assets/sfassist_demo.gif?raw=true)
+![SOQL Query Demo](https://github.com/ThisisMrAvi/SF-Assistant/blob/master/assets/sfassist_demo.gif?raw=true)
 
 ---
 
@@ -87,17 +87,17 @@ In SOQL Query editor window:
 
 This extension contributes the following settings:
 
-| Setting                   | Type     | Default            | Description                                                      |
-| ------------------------- | -------- | ------------------ | ---------------------------------------------------------------- |
-| `sf-assistant.apiVersion` | `number` | `60.0`             | API version to use for Salesforce queries.                       |
-| `sf-assistant.cacheTTL`   | `number` | `3600000` (1 hour) | Time (in ms) to cache metadata (objects, fields, relationships). |
+| Setting                   | Type     | Default | Description                                                         |
+| ------------------------- | -------- | ------- | ------------------------------------------------------------------- |
+| `sf-assistant.apiVersion` | `number` | `60.0`  | API version to use for Salesforce queries.                          |
+| `sf-assistant.cacheTTL`   | `number` | `12`    | Time (in hours) to cache metadata (objects, fields, relationships). |
 
 You can update these in VS Code **settings.json**:
 
 ```json
 {
   "sf-assistant.apiVersion": 61.0,
-  "sf-assistant.cacheTTL": 1800000
+  "sf-assistant.cacheTTL": 12
 }
 ```
 
@@ -114,9 +114,6 @@ You can update these in VS Code **settings.json**:
 
 Planned enhancements for upcoming releases:
 
-- ✅ **Autocomplete for SOQL** (objects, fields, operators, values).
-- ✅ **Context-aware suggestions** (handle nested queries & sub-selects).
-- 🔍 **Improved Metadata Explorer**: filter, search, and drill down.
 - 🎨 **UI improvements**: better formatting, theming, and table controls.
 - 🔄 **Data Load**: Create/Update/Delete records directly from the extension.
 - ⚡ **Performance optimizations** for large datasets.
@@ -126,23 +123,19 @@ _Suggestions and feedback are welcome to help shape future versions._
 
 ---
 
-## 📝 Release Notes
-
-### 0.0.1
-
-- Initial release
-- SOQL query execution
-- Table result view
-- Export to CSV/JSON
-- Object Explorer
-- Basic caching & settings
-
----
-
 ## 📚 References
 
 - [Salesforce CLI](https://developer.salesforce.com/tools/sfdxcli)
 - [VS Code Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+
+---
+
+## 🙏 Acknowledgements
+
+This extension was inspired by the functionality and user experience of  
+[Salesforce Inspector](https://github.com/superfell/inspector) and  
+[Salesforce Inspector Reloaded](https://github.com/mohancm/salesforce-inspector-reloaded).  
+Big thanks to the creators and community for their contributions!
 
 ---
 
