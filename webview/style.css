@@ -24,6 +24,7 @@ body.light {
     --btn-neutral-text: #333;
     --btn-disabled-bg: #ccc;
     --btn-disabled-text: #888;
+    --card-bg: #ffffff;
 }
 
 body.dark {
@@ -51,6 +52,7 @@ body.dark {
     --btn-neutral-text: #ddd;
     --btn-disabled-bg: #333;
     --btn-disabled-text: #666;
+    --card-bg: #252526;
 }
 
 /* Global Styles */
@@ -550,7 +552,7 @@ h2 {
 
 /* Object card */
 .object-card {
-    background: var(--card-bg, #fff);
+    background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 10px;
@@ -561,7 +563,7 @@ h2 {
 }
 
 .object-card:hover {
-    transform: translateY(-3px);
+    transform: scale(1.02);
     background: var(--pill-hover-bg);
 }
 
@@ -590,7 +592,7 @@ h2 {
 /* Sub info */
 .object-sub {
     font-size: 0.9em;
-    color: #444;
+    color: var(--text-color);
     margin: 4px 0;
 }
 

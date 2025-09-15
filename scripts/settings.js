@@ -42,7 +42,7 @@ export function initSettingsActions() {
 
     // Close settings modal on Escape
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && dom.modal && !dom.modal.classList.contains('hidden')) {
+        if (e.key === 'Escape' && dom.modalContainer && !dom.modalContainer.classList.contains('hidden')) {
             closeModal();
         }
     });

@@ -62,6 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
             dom.sidebar.classList.remove('active');
         });
     }
+
+    // Close Options sidebar on Escape
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && dom.sidebar && dom.sidebar.classList.contains('active')) {
+            dom.sidebar.classList.remove('active');
+        }
+    });
 });
 
 /**

@@ -217,18 +217,21 @@ function initCollapsibles(container) {
                 const headers = JSON.parse(content.getAttribute("data-headers") || "[]");
 
                 if (sectionType === "fields") {
+                    // Add new column header
+                    const extendedHeaders = [...headers, "Picklist/Formula"];
+
                     const rows = objMeta.fields.map(f => {
-                        // --- Build title ---
-                        let titleText = "";
+                        // --- Build details text ---
+                        let details = "";
 
                         // Picklist values
                         if ((f.type === "picklist" || f.type === "multipicklist") && Array.isArray(f.picklistValues)) {
-                            titleText = f.picklistValues.map(v => v.label).join(", ");
+                            details = f.picklistValues.map(v => v.label).join(", ");
                         }
 
                         // Calculated fields
                         if (f.calculated) {
-                            titleText = f.calculatedFormula || f.label || titleText;
+                            details = f.calculatedFormula || f.label || details;
                         }
 
                         // --- Build type cell ---
@@ -245,22 +248,24 @@ function initCollapsibles(container) {
                             const refs = f.referenceTo
                                 .map(r => `<a href="#" class="child-link" data-child="${r}">${r}</a>`)
                                 .join(", ");
-                            return `<tr title="${titleText || ""}">
+                            return `<tr>
                                         <td>${f.name}</td>
                                         <td>${f.label}</td>
                                         <td>${f.type} (${refs})</td>
+                        <td>${details}</td>
                                     </tr>`;
                         }
 
-                        return `<tr title="${titleText || ""}">
+                        return `<tr>
                                 <td>${f.name}</td>
                                 <td>${f.label}</td>
                                 <td>${typeText}</td>
+                <td>${details}</td>
                                 </tr>`;
                     }).join("");
 
                     content.innerHTML = `<table class="meta-table">
-                            <thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
+                            <thead><tr>${extendedHeaders.map(h => `<th>${h}</th>`).join("")}</tr></thead>
                             <tbody>${rows}</tbody>
                         </table>`;
                 }
