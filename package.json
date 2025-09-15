@@ -2,7 +2,7 @@
   "name": "sf-assistant",
   "displayName": "Salesforce Assistant: SOQL Queries, Metadata Explorer & More",
   "description": "Execute SOQL queries from VS Code, display results in a table, and export to CSV/JSON. Uses logged-in Salesforce org.",
-  "version": "1.0.2",
+  "version": "2.0.0",
   "icon": "assets/sf_assist_logo_round_128x.png",
   "pricing": "Free",
   "license": "BSD-3-Clause",
