@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="stylesheet" href="${styleUri}">
+    <title>Salesforce Assistant</title>
+</head>
+
+<body>
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+            <h2>SF Assistant</h2>
+            <button id="closeSidebarBtn" class="close-btn">&times;</button>
+        </div>
+        <a href="" data-page="soql-panel">Open SOQL Query</a>
+        <a href="" data-page="meta-explorer">Object Explorer</a>
+        <a href="" data-page="settings">Settings</a>
+        <div class="footer" style="bottom: 0px">
+            <p class="info-text">
+                Built with ❤️ for Salesforce developers worldwide.<br>
+            </p>
+        </div>
+    </div>
+    <div id="sf-assistant-container">
+        <div class="header-container">
+            <button id="appBtn" class="menu-btn">☰</button>
+        </div>
+        <!-- Main content -->
+        <div id="content">Loading...</div>
+    </div>
+
+    <!-- Modal -->
+    <section id="modalContainer" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="ModalTitle">
+    </section>
+
+    <!-- Modal backdrop -->
+    <div id="modalBackdrop" class="modal-backdrop hidden" role="presentation"></div>
+    <!-- Modal end -->
+
+    <script type="module" src="${scriptUri}"></script>
+</body>
+
+</html>

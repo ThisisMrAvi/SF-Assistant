@@ -1,7 +1,8 @@
+.github
 out
 dist
 node_modules
 .vscode-test/
 *.vsix
-*/backup/*
+backup/
 */tests/*

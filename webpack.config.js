@@ -49,8 +49,7 @@ const extensionConfig = {
   plugins: [
     new CopyPlugin({
       patterns: [
-        { from: 'scripts', to: 'scripts' },
-        { from: 'webview', to: 'webview' }
+        { from: 'scripts', to: 'scripts' }
       ],
     }),
   ],

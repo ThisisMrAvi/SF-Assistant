@@ -1,0 +1,74 @@
+<div id="soql-container">
+
+    <div class="flex-container">
+        <!-- Saved Queries -->
+        <div class="flex-group width-3-of-4">
+            <label for="savedQueriesDropdown">Saved Queries:</label>
+            <select id="savedQueriesDropdown" style="max-width: 50%;">
+                <option value="">-- Select Saved Query --</option>
+            </select>
+            <button id="deleteQueryBtn" class="btn btn-danger">Delete</button>
+        </div>
+        <div class="flex-group width-1-of-4">
+            <label class="tooling-toggle" style="display: flex; align-items: center; gap: 6px;">
+                <input type="checkbox" id="isToolingCheckbox" class="input-checkbox" />
+                Is Tooling API?
+            </label>
+        </div>
+    </div>
+
+    <!-- Editor row: Monaco editor + actions -->
+    <div id="editor-row">
+        <div id="editor" class="editor-container">
+            <textarea id="soqlQuery"></textarea>
+        </div>
+
+        <div id="editor-controls">
+            <input type="text" id="saveLabel" placeholder="Label" />
+            <div id="labelError" class="error-message hidden"></div>
+            <button id="saveQueryBtn" class="btn btn-neutral">Save Query</button>
+            <button id="runQueryBtn" class="btn btn-primary">Run Query</button>
+        </div>
+    </div>
+
+    <!-- Hidden textarea kept for compatibility with old code that queries #soqlQuery -->
+
+    <div id="queryError" class="error-message hidden"></div>
+
+    <!-- Suggestions -->
+    <div id="suggestionsContainer">
+        <div id="suggestionsHeader">
+            <span id="suggestionsTitle" class="suggestions-title"></span>
+        </div>
+        <div id="suggestionItems" class="suggestions-container" style="display:none">
+        </div>
+    </div>
+
+
+    <!-- Status bar -->
+    <div id="statusBar"></div>
+
+    <!-- Results -->
+    <div class="result-container">
+
+        <div id="resultContainer" class="hidden">
+            <!-- Export -->
+            <div class="flex-container">
+                <div class="filter-container">
+                    <input id="filterInput" type="search" placeholder="Filter Results" value="">
+                </div>
+                <div class="flex-group">
+                    <div id="filterResultText" class="info-text"></div>
+                </div>
+                <div class="flex-group export-btns">
+                    <button id="exportCSVBtn" class="btn btn-primary">Export CSV</button>
+                    <button id="exportJSONBtn" class="btn btn-primary">Export JSON</button>
+                </div>
+            </div>
+
+            <!-- Result table -->
+            <div id="resultTable"></div>
+        </div>
+
+    </div>
+</div>

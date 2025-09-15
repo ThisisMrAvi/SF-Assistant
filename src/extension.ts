@@ -6,10 +6,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('sf-assistant.runSoqlQuery', async () => {
-            await panelManager.createOrShow('soql');
+            await panelManager.createOrShow('soql-panel');
         }),
         vscode.commands.registerCommand('sf-assistant.metaExplorer', async () => {
-            await panelManager.createOrShow('meta');
+            await panelManager.createOrShow('meta-explorer');
         }),
         vscode.commands.registerCommand('sf-assistant.clearCache', async () => {
             panelManager.clearCache();

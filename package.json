@@ -12,9 +12,9 @@
   "publisher": "thisismravi",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ThisisMrAvi/SOQL-Assist"
+    "url": "https://github.com/ThisisMrAvi/SF-Assistant"
   },
-  "homepage": "https://github.com/ThisisMrAvi/SOQL-Assist/blob/master/README.md",
+  "homepage": "https://github.com/ThisisMrAvi/SF-Assistant/blob/master/README.md",
   "engines": {
     "vscode": "^1.80.0"
   },
