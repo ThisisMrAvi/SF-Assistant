@@ -6,12 +6,15 @@ export function sendTextUpdateEvent(elm = dom.queryInput) {
     elm.dispatchEvent(inputEvent);
 }
 
-export function updateStatus(msg, color = 'green') {
-    if (dom.statusBar) {
+// Throttle DOM updates using requestAnimationFrame
+export function safeUpdateStatus(msg, color) {
+    if (!dom.statusBar) return;
+    if (dom.statusBar.textContent === msg) return;
+    requestAnimationFrame(() => {
         dom.statusBar.style.display = 'block';
         dom.statusBar.style.color = color;
         dom.statusBar.textContent = msg;
-    }
+    });
 }
 
 export function updateSelectedSuggestion(suggestionsDiv) {
@@ -47,11 +50,49 @@ export function validObjectName(objectName) {
     return objExist;
 }
 
-export function handleCopy(event, textToCopy) {
-    const btn = event.currentTarget;
-    navigator.clipboard.writeText(textToCopy).then(() => {
-        btn.classList.add('copied');
-        setTimeout(() => (btn.classList.remove('copied')), 3000);
-    });
-}
+// Store timeouts in a WeakMap to avoid adding properties to DOM elements
+const copyTimeouts = new WeakMap();
+const COPY_FEEDBACK_DURATION = 3000;
 
+export async function handleCopy(btn, textToCopy, duration = COPY_FEEDBACK_DURATION) {
+    if (!btn) {
+        return;
+    }
+
+    // Cache icon element
+    const iconSpan = btn.querySelector('.icon');
+
+    // Clean up any existing timeout
+    const existingTimeout = copyTimeouts.get(btn);
+    if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        if (iconSpan) {
+            iconSpan.classList.remove('icon-copied');
+            iconSpan.classList.add('icon-copy');
+        }
+    }
+
+    try {
+        // Attempt to copy text
+        await navigator.clipboard.writeText(textToCopy);
+        if (iconSpan) {
+            iconSpan.classList.remove('icon-copy');
+            iconSpan.classList.add('icon-copied');
+        }
+        safeUpdateStatus('Copied to clipboard', 'green');
+
+        // Set up automatic reset
+        const timeoutId = setTimeout(() => {
+            if (iconSpan) {
+                iconSpan.classList.remove('icon-copied');
+                iconSpan.classList.add('icon-copy');
+            }
+            copyTimeouts.delete(btn);
+        }, duration);
+
+        copyTimeouts.set(btn, timeoutId);
+    } catch (error) {
+        console.error('Copy failed:', error);
+        safeUpdateStatus('Failed to copy to clipboard', 'red');
+    }
+}

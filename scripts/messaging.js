@@ -1,14 +1,21 @@
 import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { renderResults } from "./results.js";
-import { sendTextUpdateEvent, updateStatus } from "./utils.js";
+import { sendTextUpdateEvent, safeUpdateStatus } from "./utils.js";
 import { hideSuggestions, showSuggestions } from "./suggestions.js";
 import { injectPage } from "./main.js";
 import { viewObjectMeta, renderVirtualList } from "./metaActions.js";
+import { populateQueries, toggeleQueryRunningStatus } from "./queryActions.js";
 
 export function initMessaging() {
-    window.addEventListener('message', (ev) => {
-        const msg = ev.data;
+    window.addEventListener('message', handleExtensionMessage);
+}
+
+function handleExtensionMessage(ev) {
+    const msg = ev.data;
+    console.log('received message : ' + msg.command);
+
+    try {
         switch (msg.command) {
             case 'injectPage':
                 injectPage(msg.pageName, msg.html);
@@ -18,18 +25,26 @@ export function initMessaging() {
                 state.orgInfo = msg.orgInfo;
                 break;
             case 'showResult':
-                renderResults(msg.data);
+                if (state.isRunning) {
+                    safeUpdateStatus(`✅ ${msg.rowCount} records in ${msg.time}s`, 'green');
+                    renderResults(msg.data);
+                    toggeleQueryRunningStatus();
+                }
                 break;
             case 'savedQueries':
-                populateSavedQueries(msg.queries || []);
+                populateQueries(msg.queries || [], "Saved");
                 break;
             case 'restoreState':
-                if (msg.query) {
-                    dom.queryInput.value = msg.query;
-                    dom.toolingInput.checked = msg.isTooling;
-                    state.isTooling = msg.isTooling;
+                populateQueries(msg.queries || [], "Recent");
+                if (msg.queries && msg.queries.length) {
+                    dom.queryInput.value = msg.queries[0];
                     sendTextUpdateEvent(dom.queryInput);
                 }
+                dom.toolingInput.checked = msg.isTooling;
+                state.isTooling = msg.isTooling;
+                break;
+            case 'recentQueries':
+                populateQueries(msg.queries || [], "Recent");
                 break;
             case 'objectsList':
                 state.objectsList = msg.objects;
@@ -57,11 +72,8 @@ export function initMessaging() {
                     viewObjectMeta(msg.objMeta.name);
                 }
                 break;
-            case 'executionFeedback':
-                updateStatus(`✅ ${msg.rowCount} records in ${msg.time}s`, 'green');
-                break;
             case 'error':
-                updateStatus(`❌ ${msg.message}`, 'red');
+                safeUpdateStatus(`❌ ${msg.message}`, 'red');
                 hideSuggestions();
                 break;
             case 'iconMap':
@@ -71,19 +83,7 @@ export function initMessaging() {
             default:
                 console.log(`Unknown command from extension: ${msg.command}`);
         }
-    });
-}
-
-function populateSavedQueries(list) {
-    if (!dom.savedQueriesDropdown) {
-        return;
+    } catch (err) {
+        console.error('Error in messaging service: ' + err);
     }
-    dom.savedQueriesDropdown.innerHTML = '<option value="">-- Select Saved Query --</option>';
-    list.forEach(item => {
-        const opt = document.createElement('option');
-        opt.value = item.query;
-        opt.textContent = item.label;
-        opt.title = item.query;
-        dom.savedQueriesDropdown.appendChild(opt);
-    });
 }

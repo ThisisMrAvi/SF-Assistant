@@ -14,7 +14,9 @@ export const state = {
     currentObject: '',
     lastObject: '',
     token: '',
+    showAttributeColumns: true,
     isTooling: false,
+    isRunning: false,
 };
 
 // Operators by field type

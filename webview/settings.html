@@ -1,26 +1,50 @@
-<div class="modal-container">
-    <div class="modal-header">
-        <h2 id="settingsModalTitle" class="modal-title">Settings</h2>
-    </div>
-    <div class="modal-content">
-        <label for="themeSelect">Theme:</label>
-        <select id="themeSelect">
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-        </select>
-    </div>
-
+<div class="modal-content">
+    <!-- Appearance Section -->
     <div class="flex-container">
-        <div class="flex-group" style="margin: 8px;">
-            <button id="copySessionId" class="btn btn-neutral copy-btn">
-                <span class="icon"></span> Copy Session Id
-            </button>
-            <button id="copyLoginUrl" class="btn btn-neutral copy-btn">
-                <span class="icon"></span> Copy Login URL
-            </button>
+        <div class="flex-group" style="width: 100%;">
+            <h2>Appearance</h2>
+            <div class="box" style="margin: 12px 0;">
+                <label for="themeSelect">Theme:</label>
+                <select id="themeSelect" style="margin-left: 8px;">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </div>
         </div>
     </div>
-    <div class="modal-footer">
-        <button id="closeSettingsBtn" class="btn btn-primary">Close</button>
+
+    <!-- Organization Section -->
+    <div class="flex-container">
+        <div class="flex-group" style="width: 100%;">
+            <h2>Salesforce Organization</h2>
+            <div class="box">
+                <table class="meta-table" style="margin-top: 12px;">
+                    <tr>
+                        <td><strong>Organization ID</strong></td>
+                        <td id="orgId">N/A</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Alias</strong></td>
+                        <td id="alias">N/A</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Username</strong></td>
+                        <td id="username">N/A</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Instance URL</strong></td>
+                        <td id="instanceUrl">N/A</td>
+                    </tr>
+                </table>
+                <button id="copySessionId" class="btn btn-neutral">
+                    <span class="icon icon-copy"></span>
+                    Copy Session Id
+                </button>
+                <button id="copyLoginUrl" class="btn btn-neutral">
+                    <span class="icon icon-copy"></span>
+                    Copy Login URL
+                </button>
+            </div>
+        </div>
     </div>
 </div>

@@ -230,22 +230,6 @@ h2 {
     color: var(--text-color);
 }
 
-.width-4-of-4 {
-    max-width: 100%;
-}
-
-.width-3-of-4 {
-    max-width: 70%;
-}
-
-.width-2-of-4 {
-    max-width: 50%;
-}
-
-.width-1-of-4 {
-    max-width: 25%;
-}
-
 #editor-row {
     display: flex;
     gap: 12px;
@@ -259,7 +243,7 @@ h2 {
 
 #soqlQuery {
     width: 100%;
-    min-height: 120px;
+    min-height: 128px;
     font-family: Consolas, monospace;
     font-size: 12pt;
     border: 1px solid var(--border-color);
@@ -384,6 +368,10 @@ h2 {
     gap: 12px;
     margin-top: 6px;
     padding: 12px 0;
+    width: 100%;
+}
+
+.border-top {
     border-top: 1px solid var(--border-color);
 }
 
@@ -395,6 +383,11 @@ h2 {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.flex-group select {
+    flex: 1;
+    min-width: 200px;
 }
 
 .flex-group button {
@@ -419,6 +412,15 @@ h2 {
     font-size: 18px;
 }
 
+/* Organization Details */
+.box {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 16px;
+}
+
 /* Modal */
 .modal {
     position: fixed;
@@ -441,10 +443,21 @@ h2 {
     flex-direction: column;
 }
 
-.modal-header,
-.modal-footer {
+.modal-header {
+    position: relative;
     padding: 12px 16px;
     border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.modal-close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
 }
 
 .modal-title {
@@ -454,6 +467,7 @@ h2 {
 }
 
 .modal-footer {
+    padding: 12px 16px;
     border-top: 1px solid var(--border-color);
     border-bottom: none;
     display: flex;
@@ -526,19 +540,29 @@ h2 {
     cursor: default;
 }
 
-.copy-btn .icon {
+.btn .icon {
     display: inline-block;
     width: 16px;
     height: 16px;
-    background: url("../assets/icons/clipboard.svg") no-repeat center;
     background-size: contain;
     margin-right: 6px;
 }
 
-.copy-btn.copied .icon {
+.icon-copy {
+    background: url("../assets/icons/clipboard.svg") no-repeat center;
+}
+
+.icon-copied {
     background-image: url("../assets/icons/clipboard-check.svg");
 }
 
+.icon-show {
+    background-image: url("../assets/icons/eye.svg");
+}
+
+.icon-hide {
+    background-image: url("../assets/icons/eye-off.svg");
+}
 
 /* Metadata Explorer */
 
@@ -571,13 +595,19 @@ h2 {
 .object-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 6px;
+    gap: 6px;
 }
 
 .object-label {
     font-size: 1.1em;
     font-weight: bold;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 .key-prefix {

@@ -2,10 +2,17 @@ import { state } from "./state.js";
 import { dom } from "./dom.js";
 import { debounce, fetchObjectMetadataIfNeeded } from "./utils.js";
 
+// Store listeners at module level
+const listeners = {
+    filter: debounce(renderVirtualList, 300),
+    toolingChange: handleToolingApiChange
+};
+
 /**
  * Initialize Meta Explorer actions
  */
 export function initMetaExplorerActions() {
+    // Set initial tooling state
     if (dom.toolingInput) {
         dom.toolingInput.checked = state.isTooling;
     }
@@ -24,16 +31,11 @@ export function initMetaExplorerActions() {
         });
     }
 
-    // Live filter
-    if (dom.objectNameInput) {
-        dom.objectNameInput.addEventListener("input", debounce(renderVirtualList, 300));
-    }
+    // Add event listeners with optional chaining
+    dom.objectNameInput?.addEventListener("input", listeners.filter);
+    dom.toolingInput?.addEventListener("change", listeners.toolingChange);
 
-    // Tooling toggle
-    if (dom.toolingInput) {
-        dom.toolingInput.addEventListener("change", handleToolingApiChange);
-    }
-
+    // Initial render
     renderVirtualList();
 }
 
@@ -70,21 +72,34 @@ export function renderVirtualList() {
     spacer.style.height = `${filtered.length * rowHeight}px`;
     container.appendChild(spacer);
 
+    // --- Card Pool ---
+    const pool = [];
+    for (let i = 0; i < visibleCount; i++) {
+        const card = createObjectElem({});
+        card.style.position = "absolute";
+        card.style.left = "0";
+        card.style.right = "0";
+        container.appendChild(card);
+        pool.push(card);
+    }
+
     function renderRows() {
         const scrollTop = container.scrollTop;
         const startIndex = Math.floor(scrollTop / rowHeight);
         const endIndex = Math.min(startIndex + visibleCount, filtered.length);
 
-        container.querySelectorAll(".object-card").forEach(el => el.remove());
+        for (let i = 0; i < visibleCount; i++) {
+            const index = startIndex + i;
+            const card = pool[i];
 
-        for (let i = startIndex; i < endIndex; i++) {
-            const obj = filtered[i];
-            const card = createObjectElem(obj);
-            card.style.position = "absolute";
-            card.style.top = `${i * rowHeight}px`;
-            card.style.left = "0";
-            card.style.right = "0";
-            container.appendChild(card);
+            if (index < filtered.length) {
+                const obj = filtered[index];
+                updateObjectElem(card, obj);
+                card.style.top = `${index * rowHeight}px`;
+                card.style.display = "block";
+            } else {
+                card.style.display = "none";
+            }
         }
     }
 
@@ -95,6 +110,18 @@ export function renderVirtualList() {
 }
 
 /**
+ * Tooling API toggle
+ */
+function handleToolingApiChange() {
+    state.isTooling = dom.toolingInput.checked;
+    const objReq = state.isTooling ? "requestToolingObjectList" : "requestObjectList";
+    state.vscode.postMessage({
+        command: objReq,
+        isTooling: state.isTooling,
+    });
+}
+
+/**
  * Create object card
  */
 function createObjectElem(obj) {
@@ -102,13 +129,29 @@ function createObjectElem(obj) {
     card.className = "object-card";
     card.innerHTML = `
         <div class="object-header">
-            <span class="object-label">${obj.label}</span>
-            <span class="key-prefix">${obj.keyPrefix || "N/A"}</span>
+            <span class="object-label"></span>
+            <span class="key-prefix"></span>
         </div>
-        <div class="object-sub"><strong>API:</strong> ${obj.name}</div>
+        <div class="object-sub"><strong>API:</strong> <span class="api-name"></span></div>
     `;
-    card.addEventListener("click", () => viewObjectMeta(obj.name));
+    // Add click handler from module-level listeners
+    card.addEventListener("click", () => {
+        if (card.dataset.apiName) {
+            viewObjectMeta(card.dataset.apiName);
+        }
+    });
+    updateObjectElem(card, obj); // initial fill
     return card;
+}
+
+/**
+ * Update object card (for pooled reuse)
+ */
+function updateObjectElem(card, obj) {
+    card.querySelector(".object-label").textContent = obj.label || "";
+    card.querySelector(".key-prefix").textContent = obj.keyPrefix || "N/A";
+    card.querySelector(".api-name").textContent = obj.name || "";
+    card.dataset.apiName = obj.name || "";
 }
 
 /**
@@ -137,14 +180,18 @@ function renderObjectMeta(objMeta, container) {
 
     let html = "";
 
-    // Root string props
-    const stringProps = Object.keys(objMeta)
-        .filter(key => typeof objMeta[key] === "string")
+    // Root props
+    const primitiveProps = Object.keys(objMeta)
+        .filter(key => {
+            const value = objMeta[key];
+            return value === null || (typeof value !== "object" && !Array.isArray(value));
+        })
         .map(key => `<tr><td>${key}</td><td>${objMeta[key]}</td></tr>`)
         .join("");
 
-    if (stringProps) {
-        html += renderCollapsibleSection("Object Properties", stringProps, ["Property", "Value"]);
+
+    if (primitiveProps) {
+        html += renderCollapsibleSection("Object Properties", primitiveProps, ["Property", "Value"]);
     }
 
     // Fields
@@ -170,7 +217,7 @@ function renderCollapsibleSection(title, rowsHtml, headers = []) {
         : rowsHtml;
 
     return `
-        <div class="collapsible-section">
+        <div class="collapsible-section collapsed">
             <div class="collapse-header">
                 <span>${title}</span>
                 <span class="collapse-icon"></span>
@@ -296,17 +343,5 @@ function initCollapsibles(container) {
                 });
             }
         });
-    });
-}
-
-/**
- * Tooling API toggle
- */
-function handleToolingApiChange() {
-    state.isTooling = dom.toolingInput.checked;
-    const objReq = state.isTooling ? "requestToolingObjectList" : "requestObjectList";
-    state.vscode.postMessage({
-        command: objReq,
-        isTooling: state.isTooling,
     });
 }

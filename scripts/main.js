@@ -1,10 +1,10 @@
 import { initSuggestions } from "./suggestions.js";
 import { initQueryActions } from "./queryActions.js";
 import { initMessaging } from "./messaging.js";
-import { dom, initMainDom, initMetaDom, initSettingsDom, initSoqlDom } from "./dom.js";
+import { dom, initMainDom, initMetaDom, initSoqlDom } from "./dom.js";
 import { state } from "./state.js";
 import { initMetaExplorerActions } from "./metaActions.js";
-import { initSettingsActions } from "./settings.js";
+import { openSettings } from "./settings.js";
 
 /**
  * Main DOM wiring
@@ -117,10 +117,7 @@ export async function injectPage(pageName, pageContent) {
                 initMetaExplorerActions();
                 break;
             case 'settings':
-                openModal();
-                dom.modalContainer.innerHTML = pageContent ?? '<p>No content</p>';
-                initSettingsDom();
-                initSettingsActions();
+                openSettings(pageContent);
                 break;
             default:
                 console.log('Injected page:', pageName);
@@ -129,16 +126,6 @@ export async function injectPage(pageName, pageContent) {
     } catch (err) {
         console.error('injectPage error', err);
         if (content) content.innerHTML = `<p style="color:red;">Failed to load page: ${pageName}</p>`;
-    }
-}
-
-// modal helpers
-function openModal() {
-    if (dom.modalContainer) {
-        dom.modalContainer.classList.remove('hidden');
-    }
-    if (dom.modalBackdrop) {
-        dom.modalBackdrop.classList.remove('hidden');
     }
 }
 

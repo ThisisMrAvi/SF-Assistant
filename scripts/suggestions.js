@@ -2,11 +2,28 @@ import { state, operatorSuggestions, dateLiterals } from "./state.js";
 import { dom } from "./dom.js";
 import { sendTextUpdateEvent, debounce, fetchObjectMetadataIfNeeded, validObjectName } from "./utils.js";
 
+// ------------------------
+// Config
+// ------------------------
+const MAX_SUGGESTIONS = 50;
+
+// Store listeners at module level
+const listeners = {
+    input: debounce(handleQueryInput, 300),
+    keydown: handleQueryKeyDown
+};
+
+// ------------------------
+// Initialization
+// ------------------------
 export function initSuggestions() {
-    dom.queryInput.addEventListener('input', debounce(handleQueryInput, 500));
-    dom.queryInput.addEventListener('keydown', handleQueryKeyDown);
+    dom.queryInput?.addEventListener('input', listeners.input);
+    dom.queryInput?.addEventListener('keydown', listeners.keydown);
 }
 
+// ------------------------
+// Suggestion Display
+// ------------------------
 export function showSuggestions(token, type, field) {
     try {
         dom.suggestionsContainer.style.display = "block";
@@ -15,44 +32,37 @@ export function showSuggestions(token, type, field) {
         let list = [];
 
         switch (type) {
-            case "field": {
+            case "field":
                 if (!state.currentObject) {
                     return;
                 }
                 dom.suggestionsTitle.textContent = `${state.currentObject} Field Suggestions:`;
-                if (!state.objectMeta[state.currentObject]) {
-                    state.vscode.postMessage({
-                        command: "requestObjectMeta",
-                        objectType: state.currentObject,
-                        isTooling: state.isTooling
-                    });
-                } else {
-                    list = state.objectMeta[state.currentObject].fields;
+                const meta = state.objectMeta[state.currentObject];
+                if (!meta) {
+                    fetchObjectMetadataIfNeeded(state.currentObject);
+                    showLoadingText(type);
+                    return;
                 }
+                list = meta.fields;
                 break;
-            }
 
-            case "object": {
+            case "object":
                 dom.suggestionsTitle.textContent = "Object Suggestions:";
                 list = state.isTooling ? state.toolingObjectsList : state.objectsList;
                 break;
-            }
 
-            case "operator": {
+            case "operator":
                 dom.suggestionsTitle.textContent = `Operator Suggestions for ${field?.name || "field"}:`;
-                list = operatorSuggestions[field.type];
+                list = operatorSuggestions[field.type] || [];
                 break;
-            }
 
-            case "value": {
+            case "value":
                 dom.suggestionsTitle.textContent = `Value Suggestions for ${field?.name || "field"}:`;
 
                 if (field?.type === "picklist") {
-                    const activeValues = field.picklistValues?.filter(el => el.active) || [];
-                    list = activeValues.map(item => ({
-                        label: `'${item.label}'`,
-                        name: `'${item.value}'`
-                    }));
+                    list = (field.picklistValues || [])
+                        .filter(v => v.active)
+                        .map(item => ({ label: `'${item.label}'`, name: `'${item.value}'` }));
                 } else if (field?.type === "date" || field?.type === "datetime") {
                     list = dateLiterals;
                 } else {
@@ -60,28 +70,30 @@ export function showSuggestions(token, type, field) {
                     return;
                 }
                 break;
-            }
 
             default:
                 dom.suggestionsTitle.textContent = "Suggestions:";
                 break;
         }
 
-        if (!list || list.length === 0) {
+        if (!list || !list.length) {
             showLoadingText(type);
             return;
         }
 
-        // normalize + filter
-        const tokenLowerCase = token.toLowerCase()
-        const filtered = list.filter((s) => {
-            if (typeof s === "string") {
-                return s.toLowerCase().includes(tokenLowerCase);
-            }
-            return (s.name || s.value || s.label || "")
-                .toLowerCase()
-                .includes(tokenLowerCase);
-        });
+        // Precompute lowercase for filtering
+        if (!list._lc) {
+            list._lc = list.map(item =>
+                typeof item === "string" ? item.toLowerCase() : (item.name || item.value || item.label || "").toLowerCase()
+            );
+        }
+
+        const tokenLC = token.toLowerCase();
+        const filtered = list
+            .map((s, idx) => ({ item: s, lc: list._lc[idx] }))
+            .filter(obj => obj.lc.includes(tokenLC))
+            .slice(0, MAX_SUGGESTIONS)
+            .map(obj => obj.item);
 
         if (!filtered.length) {
             hideSuggestions();
@@ -89,37 +101,26 @@ export function showSuggestions(token, type, field) {
         }
 
         let suggestionIndex = 0;
-        filtered.forEach((item) => {
-            let elm;
+        filtered.forEach(item => {
             if (typeof item === "string") {
                 // for operators, literals, simple strings
-                elm = createSuggestionElm(suggestionIndex++, type, item, item, null);
+                frag.appendChild(createSuggestionElm(suggestionIndex++, type, item, item, null));
             } else {
                 // object/field style
                 if (type === "field" && item.type === "reference" && item.relationshipName) {
-                    const relElm = createSuggestionElm(
-                        suggestionIndex++,
-                        type,
-                        item.relationshipName + ".",
-                        item.relationshipName,
-                        item.type
-                    );
-                    frag.appendChild(relElm);
+                    frag.appendChild(createSuggestionElm(suggestionIndex++, type, item.relationshipName + ".", item.relationshipName, item.type));
                 }
-                elm = createSuggestionElm(
-                    suggestionIndex++,
-                    type,
-                    item.name,
-                    item.label || item.name,
-                    item.type
-                );
+                frag.appendChild(createSuggestionElm(suggestionIndex++, type, item.name, item.label || item.name, item.type));
             }
-            frag.appendChild(elm);
         });
 
-        dom.suggestionItems.appendChild(frag);
-        dom.suggestionItems.style.display = "flex";
-        state.suggestionVisible = true;
+        requestAnimationFrame(() => {
+            dom.suggestionItems.innerHTML = "";
+            dom.suggestionItems.appendChild(frag);
+            dom.suggestionItems.style.display = "flex";
+            state.suggestionVisible = true;
+            state.selectedSuggestionIndex = 0;
+        });
     } catch (err) {
         console.error('showSuggestions error: ' + (err && err.message ? err.message : String(err)));
         hideSuggestions();
@@ -127,8 +128,8 @@ export function showSuggestions(token, type, field) {
 }
 
 function showLoadingText(type) {
-    const loadingText = type === 'field' ? 'Loading fields...' : 'Loading objects...';
-    dom.suggestionItems.innerHTML = `<div class="suggestion-item loading">${loadingText}</div>`;
+    dom.suggestionItems.innerHTML = `<div class="suggestion-item loading">${type === 'field' ? 'Loading fields...' : 'Loading objects...'
+        }</div>`;
     dom.suggestionItems.style.display = 'flex';
     state.suggestionVisible = true;
     state.selectedSuggestionIndex = -1;
@@ -136,15 +137,12 @@ function showLoadingText(type) {
 
 function createSuggestionElm(idx, type, itemName, itemLabel, itemType) {
     const div = document.createElement('div');
-    div.classList.add('suggestion-item');
+    div.className = `suggestion-item ${type}-suggestion`;
     div.tabIndex = 0;
-
     div.dataset.value = itemName;
     div.title = itemLabel || itemName;
 
-    div.classList.add(`${type}-suggestion`);
-
-    if (state.iconMap && state.iconMap[itemType]) {
+    if (state.iconMap?.[itemType]) {
         const iconImg = document.createElement('img');
         iconImg.src = state.iconMap[itemType];
         iconImg.className = 'suggestion-icon';
@@ -158,11 +156,7 @@ function createSuggestionElm(idx, type, itemName, itemLabel, itemType) {
 
     div.onclick = (ev) => { ev.preventDefault(); insertSuggestion(itemName); };
     div.onkeydown = (ev) => {
-        if (ev.key === 'Enter' &&
-            !ev.shiftKey &&
-            !ev.ctrlKey &&
-            !ev.altKey &&
-            !ev.metaKey) {
+        if (ev.key === 'Enter' && !ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) {
             ev.preventDefault();
             insertSuggestion(itemName);
         }
@@ -176,7 +170,7 @@ function setSelected(idx) {
     if (!items.length) return;
     items.forEach(it => it.classList.remove('selected'));
     state.selectedSuggestionIndex = Math.max(0, Math.min(idx, items.length - 1));
-    items[state.selectedSuggestionIndex].classList.add('selected');
+    items[state.selectedSuggestionIndex]?.classList.add('selected');
 }
 
 function insertSuggestion(suggestion) {
@@ -210,6 +204,9 @@ export function hideSuggestions() {
     state.selectedSuggestionIndex = -1;
 }
 
+// ------------------------
+// Input Handler
+// ------------------------
 function handleQueryKeyDown(e) {
     dom.statusBar.style.display = 'none';
     if (!state.suggestionVisible) return;
@@ -324,7 +321,7 @@ export function getActiveFromInfo(full, pos) {
 
 
 /* ----------------------------
-   Main input handler
+   Main Query input handler
    ---------------------------- */
 function handleQueryInput(e) {
     state.selectedSuggestionIndex = 0;

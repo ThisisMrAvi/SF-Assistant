@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getOrgInfo, getObjectDescribe, runSOQLQuery, getObjectList, runRestAPI } from './salesforceService';
 import { saveFileToWorkspace } from './exportService';
+import { CacheManager } from './cacheManager';
 
 export class PanelManager {
 
@@ -11,20 +12,16 @@ export class PanelManager {
     private static panels: Map<string, vscode.WebviewPanel> = new Map();
     private static iconMap: Record<string, string> = {};
     private static cliValidated: boolean = false;
-    private static orgCache: { data: Record<string, any>, timestamp: number } = { data: {}, timestamp: 0 };
-    private static objectsCache: { data: { standard?: Record<string, any>[], tooling?: Record<string, any>[] }, timestamp: number } = { data: {}, timestamp: 0 };
-    private static objectMetaCache: Record<string, { data: Record<string, any>, timestamp: number }> = {};
-    private static CACHE_TTL_HOURS: number = vscode.workspace.getConfiguration('sf-assistant').get<number>('cacheTTL', 12); // default to 12 hours
-    private static CACHE_TTL_MS: number = PanelManager.CACHE_TTL_HOURS * 60 * 60 * 1000; // Convert hours to milliseconds
-    private static API_VERSION: number = vscode.workspace.getConfiguration('sf-assistant').get<number>('apiVersion', 60.0); // default to version 60.0
+    private static cache: CacheManager = CacheManager.getInstance(
+        vscode.workspace.getConfiguration('sf-assistant').get<number>('cacheTTL', 12)
+    );
+    private static API_VERSION: number = vscode.workspace.getConfiguration('sf-assistant').get<number>('apiVersion', 60.0);
 
     // Instance-specific
     private context: vscode.ExtensionContext;
-    private config: vscode.WorkspaceConfiguration;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-        this.config = vscode.workspace.getConfiguration('sf-assistant');
     }
 
     /**
@@ -86,11 +83,8 @@ export class PanelManager {
         panel.webview.html = html;
 
         this.validateCli(panel);
-        // Initialize after short delay
-        setTimeout(() => {
-            this.getIconMap(panel);
-            this.loadPage(panel, pageName);
-        }, 500);
+        this.getIconMap(panel);
+        this.loadPage(panel, pageName);
 
         // Handle messages from webview
         panel.webview.onDidReceiveMessage(async (message) => {
@@ -115,7 +109,7 @@ export class PanelManager {
                         await this.handleObjectMetaRequest(panel, message.objectType, message.isTooling);
                         break;
                     case 'runQuery':
-                        await this.context.workspaceState.update('lastQuery', message.query);
+                        this.updateRecentQueries(panel, message.query, message.isTooling);
                         await this.context.workspaceState.update('isTooling', message.isTooling);
                         await this.handleRunQuery(panel, message.query, message.isTooling);
                         break;
@@ -126,10 +120,10 @@ export class PanelManager {
                         await this.handleDeleteQuery(panel, message.label);
                         break;
                     case 'exportCSV':
-                        saveFileToWorkspace(message.content, this.getFileName(), 'csv');
+                        saveFileToWorkspace(message.content, this.getFileName(message.obj), 'csv');
                         break;
                     case 'exportJSON':
-                        saveFileToWorkspace(JSON.stringify(message.content, null, 2), this.getFileName(), 'json');
+                        saveFileToWorkspace(JSON.stringify(message.content, null, 2), this.getFileName(message.obj), 'json');
                         break;
                     default:
                         console.warn('[Salesforce Assistant] Unknown message from webview', message);
@@ -141,17 +135,15 @@ export class PanelManager {
     }
 
     public clearCache() {
-        PanelManager.orgCache = { data: {}, timestamp: 0 };
-        PanelManager.objectsCache = { data: { standard: [], tooling: [] }, timestamp: 0 };
-        PanelManager.objectMetaCache = {};
+        PanelManager.cache.clear();
         vscode.window.showInformationMessage('Salesforce Assistant cache cleared');
     }
 
     /**
      * getFileName
      */
-    public getFileName() {
-        return `soql_result_${Date.now()}`;
+    public getFileName(obj: string) {
+        return `soql_result_${obj ? '_' + obj : ''}${Date.now()}`;
     }
 
     private loadPage(panel: vscode.WebviewPanel, pageName: string) {
@@ -159,10 +151,16 @@ export class PanelManager {
         const contentHtml = getWebviewContent(panel, this.context, pageNameFull);
         panel.webview.postMessage({ command: 'injectPage', pageName: pageName, html: contentHtml });
         if (pageName === 'soql-panel') {
-            this.handleLazyLoadSoql(panel);
+            // Initialize after short delay
+            setTimeout(() => {
+                this.handleLazyLoadSoql(panel);
+            }, 500);
             panel.title = 'SOQL Query';
         } else if (pageName === 'meta-explorer') {
-            this.handleLazyLoadMeta(panel);
+            // Initialize after short delay
+            setTimeout(() => {
+                this.handleLazyLoadMeta(panel);
+            }, 500);
             panel.title = 'Metadata Explorer';
         }
     }
@@ -216,11 +214,34 @@ export class PanelManager {
                 panel.webview.postMessage({ command: 'error', message: result.error.data.message || 'Unknown error' });
                 return;
             }
-            panel.webview.postMessage({ command: 'showResult', data: result });
-            panel.webview.postMessage({ command: 'executionFeedback', rowCount: result.records?.length || 0, time });
+            panel.webview.postMessage({ command: 'showResult', data: result, rowCount: result.records?.length || 0, time });
         } catch (err: any) {
             panel.webview.postMessage({ command: 'error', message: err.message || String(err), stack: err.stack || '' });
         }
+    }
+
+    private async updateRecentQueries(panel: vscode.WebviewPanel, query: string, isTooling: boolean = false) {
+        const recentQueries = this.context.workspaceState.get<Array<string>>('recentQueries') || [];
+        if (!query) {
+            panel.webview.postMessage({ command: 'restoreState', queries: recentQueries, isTooling });
+            return;
+        }
+        // prevent duplicate labels
+        const normalizedQuery = query.toLowerCase();
+        const queryIndex = recentQueries.findIndex(
+            item => item.toLowerCase() === normalizedQuery
+        );
+        if (queryIndex !== -1) {
+            recentQueries.splice(queryIndex, 1);
+        }
+        recentQueries.unshift(query);
+
+        // limit history to 10
+        if (recentQueries.length > 10) {
+            recentQueries.pop();
+        }
+        await this.context.workspaceState.update('recentQueries', recentQueries);
+        panel.webview.postMessage({ command: 'recentQueries', queries: recentQueries });
     }
 
     private async handleSaveQuery(panel: vscode.WebviewPanel, label: string, query: string) {
@@ -247,9 +268,11 @@ export class PanelManager {
             panel.webview.postMessage({ command: 'objectMeta', objMeta: {} });
             return;
         }
-        const now = Date.now();
-        if (PanelManager.objectMetaCache[objectType] && now - PanelManager.objectMetaCache[objectType].timestamp < PanelManager.CACHE_TTL_MS) {
-            panel.webview.postMessage({ command: 'objectMeta', objMeta: PanelManager.objectMetaCache[objectType].data });
+
+        // Try to get from cache first
+        const cachedMeta = PanelManager.cache.get(`objectMeta-${objectType}`, isTooling ? 'tooling' : 'standard');
+        if (cachedMeta) {
+            panel.webview.postMessage({ command: 'objectMeta', objMeta: cachedMeta });
             return;
         }
 
@@ -259,7 +282,14 @@ export class PanelManager {
                 panel.webview.postMessage({ command: 'error', message: `Failed to describe object "${objectType}"` });
                 return;
             }
-            PanelManager.objectMetaCache[objectType] = { data: objMeta.result, timestamp: now };
+
+            // Store in cache
+            PanelManager.cache.set(
+                `objectMeta-${objectType}`,
+                objMeta.result,
+                isTooling ? 'tooling' : 'standard'
+            );
+
             panel.webview.postMessage({ command: 'objectMeta', objMeta: objMeta.result });
         } catch (err: any) {
             panel.webview.postMessage({ command: 'error', message: err.message || String(err), stack: err.stack || '' });
@@ -268,27 +298,27 @@ export class PanelManager {
 
     // Check Salesforce CLI installation and default org
     private async validateCli(panel: vscode.WebviewPanel) {
-        const { CliValidationService } = await import('./cliValidationService');
-        const cliInstalled = await CliValidationService.isCliInstalled();
-        const orgSet = cliInstalled ? await CliValidationService.isDefaultOrgSet() : false;
+        const cliValidation = await import('./cliValidationService');
+        const cliValidationService = cliValidation.CliValidationService;
+        const cliInstalled = await cliValidationService.isCliInstalled();
+        const orgSet = cliInstalled ? await cliValidationService.isDefaultOrgSet() : false;
         PanelManager.cliValidated = cliInstalled && orgSet;
 
         if (!cliInstalled || !orgSet) {
             panel.webview.postMessage({ command: 'error', message: 'Salesforce CLI not installed or default org not set.' });
-            await CliValidationService.showValidationError(cliInstalled, orgSet);
+            await cliValidationService.showValidationError(cliInstalled, orgSet);
             return;
         }
 
-        this.loadOrgInfo(panel);
+        this.getOrgInfo(panel);
         this.fetchObjectList(panel, 'standard');
     }
 
     private handleLazyLoadSoql(panel: vscode.WebviewPanel) {
         const saved = this.context.globalState.get<{ label: string; query: string }[]>('savedQueries') || [];
-        const lastQuery = this.context.workspaceState.get<string>('lastQuery') || '';
-        const isTooling = this.context.workspaceState.get<string>('isTooling');
+        const isTooling = this.context.workspaceState.get<boolean>('isTooling');
         panel.webview.postMessage({ command: 'savedQueries', queries: saved });
-        panel.webview.postMessage({ command: 'restoreState', query: lastQuery, isTooling });
+        this.updateRecentQueries(panel, '', isTooling);
         isTooling ? this.fetchObjectList(panel, 'tooling') : this.fetchObjectList(panel, 'standard');
     }
 
@@ -296,15 +326,18 @@ export class PanelManager {
         this.fetchObjectList(panel, 'standard');
     }
 
-    private async loadOrgInfo(panel: vscode.WebviewPanel) {
-        const now = Date.now();
-        if (PanelManager.orgCache.data && now - PanelManager.orgCache.timestamp < PanelManager.CACHE_TTL_MS) {
-            panel.webview.postMessage({ command: 'orgInfo', orgInfo: PanelManager.orgCache.data });
+    private async getOrgInfo(panel: vscode.WebviewPanel) {
+        const cachedOrgInfo = PanelManager.cache.get('orgInfo');
+        if (cachedOrgInfo) {
+            panel.webview.postMessage({ command: 'orgInfo', orgInfo: cachedOrgInfo });
             return;
         }
+
         const orgInfo = await getOrgInfo();
-        PanelManager.orgCache = { data: orgInfo, timestamp: now };
-        panel.webview.postMessage({ command: 'orgInfo', orgInfo });
+        if (orgInfo) {
+            PanelManager.cache.set('orgInfo', orgInfo);
+            panel.webview.postMessage({ command: 'orgInfo', orgInfo });
+        }
     }
 
     // private async getOrgObjects() {
@@ -322,22 +355,26 @@ export class PanelManager {
     // }
 
     private async fetchObjectList(panel: vscode.WebviewPanel, objType: 'standard' | 'tooling') {
-        const now = Date.now();
         const webviewCommand = objType === 'tooling' ? 'toolingObjectsList' : 'objectsList';
-        const isCached = PanelManager.objectsCache.data[objType]?.length && now - PanelManager.objectsCache.timestamp < PanelManager.CACHE_TTL_MS;
-        if (isCached) {
-            panel.webview.postMessage({ command: webviewCommand, objects: PanelManager.objectsCache.data[objType] });
+        const cacheKey = `objectsList-${objType}`;
+
+        // Try to get from cache first
+        const cachedObjects = PanelManager.cache.get(cacheKey);
+        if (cachedObjects) {
+            panel.webview.postMessage({ command: webviewCommand, objects: cachedObjects });
             return;
         }
 
         try {
-            if (!PanelManager.orgCache.data || now - PanelManager.orgCache.timestamp > PanelManager.CACHE_TTL_MS) {
-                await this.loadOrgInfo(panel);
+            // Get org info from cache or fetch it
+            const orgInfo = PanelManager.cache.get('orgInfo') || await getOrgInfo();
+            if (!orgInfo) {
+                panel.webview.postMessage({ command: 'error', message: 'Failed to get org info' });
+                return;
             }
-            if (!PanelManager.orgCache.data) return;
 
-            const baseUrl = <string>PanelManager.orgCache.data.instanceUrl;
-            const accessToken = <string>PanelManager.orgCache.data.accessToken;
+            const baseUrl = <string>orgInfo.instanceUrl;
+            const accessToken = <string>orgInfo.accessToken;
             const headers = { Authorization: `Bearer ${accessToken}` };
 
             const endpoint = objType === 'tooling'
@@ -346,10 +383,10 @@ export class PanelManager {
 
             const result = await runRestAPI(endpoint, 'GET', headers);
 
-            PanelManager.objectsCache.data[objType] = result.sobjects;
-            PanelManager.objectsCache.timestamp = now;
+            // Store in cache
+            PanelManager.cache.set(cacheKey, result.sobjects, objType);
 
-            panel.webview.postMessage({ command: webviewCommand, objects: PanelManager.objectsCache.data[objType] });
+            panel.webview.postMessage({ command: webviewCommand, objects: result.sobjects });
         } catch (err: any) {
             panel.webview.postMessage({ command: 'error', message: err.message || String(err), stack: err.stack || '' });
         }

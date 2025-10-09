@@ -1,18 +1,27 @@
 <div id="soql-container">
 
-    <div class="flex-container">
-        <!-- Saved Queries -->
-        <div class="flex-group width-3-of-4">
-            <label for="savedQueriesDropdown">Saved Queries:</label>
-            <select id="savedQueriesDropdown" style="max-width: 50%;">
-                <option value="">-- Select Saved Query --</option>
-            </select>
-            <button id="deleteQueryBtn" class="btn btn-danger">Delete</button>
+    <div class="flex-container border-top">
+        <div class="flex-group">
+            <div>
+                <!-- Recent Queries -->
+                <label for="recentQueriesDropdown">Recent:</label>
+                <select id="recentQueriesDropdown">
+                    <option value="">-- Select Recent Query --</option>
+                </select>
+            </div>
+            <div>
+                <!-- Saved Queries -->
+                <label for="savedQueriesDropdown">Saved:</label>
+                <select id="savedQueriesDropdown">
+                    <option value="">-- Select Saved Query --</option>
+                </select>
+                <button id="deleteQueryBtn" class="btn btn-danger">Delete</button>
+            </div>
         </div>
-        <div class="flex-group width-1-of-4">
-            <label class="tooling-toggle" style="display: flex; align-items: center; gap: 6px;">
+        <div class="flex-group">
+            <label class="tooling-toggle">
                 <input type="checkbox" id="isToolingCheckbox" class="input-checkbox" />
-                Is Tooling API?
+                Tooling API?
             </label>
         </div>
     </div>
@@ -28,6 +37,7 @@
             <div id="labelError" class="error-message hidden"></div>
             <button id="saveQueryBtn" class="btn btn-neutral">Save Query</button>
             <button id="runQueryBtn" class="btn btn-primary">Run Query</button>
+            <button id="stopQueryBtn" class="btn btn-danger disabled" disabled="true">Stop</button>
         </div>
     </div>
 
@@ -53,7 +63,7 @@
 
         <div id="resultContainer" class="hidden">
             <!-- Export -->
-            <div class="flex-container">
+            <div class="flex-container border-top">
                 <div class="filter-container">
                     <input id="filterInput" type="search" placeholder="Filter Results" value="">
                 </div>
@@ -61,6 +71,12 @@
                     <div id="filterResultText" class="info-text"></div>
                 </div>
                 <div class="flex-group export-btns">
+                    <button id="hideAttBtn" class="btn btn-neutral">
+                        <span class="icon icon-hide"></span></button>
+                    <button id="copyCSVBtn" class="btn btn-neutral">
+                        <span class="icon icon-copy"></span> Copy CSV</button>
+                    <button id="copyJSONBtn" class="btn btn-neutral">
+                        <span class="icon icon-copy"></span> Copy JSON</button>
                     <button id="exportCSVBtn" class="btn btn-primary">Export CSV</button>
                     <button id="exportJSONBtn" class="btn btn-primary">Export JSON</button>
                 </div>
