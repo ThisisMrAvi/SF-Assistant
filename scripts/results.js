@@ -156,7 +156,7 @@ function createTableRow(rowData, keys) {
         const td = document.createElement('td');
         const value = rowData[k] ?? '';
         // Only use innerHTML for known HTML content (links), otherwise use textContent
-        if (value.startsWith('<a href=')) {
+        if (typeof value === 'string' && value.trim().toLowerCase().startsWith('<a ')) {
             td.innerHTML = value;
             // Hide attribute columns if state.showAttributeColumns is false
             if (!state.showAttributeColumns && k.includes('[') && k.includes(']')) {
