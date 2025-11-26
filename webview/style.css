@@ -379,19 +379,49 @@ h2 {
     min-width: 200px;
 }
 
+/* Enhance global flex-group layout */
 .flex-group {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
 }
 
-.flex-group select {
-    flex: 1;
-    min-width: 200px;
+/* Labels: keep compact and aligned */
+.flex-group label {
+    white-space: nowrap;
+    font-weight: 500;
+    margin-right: 4px;
 }
 
+/* Select elements: flexible but bounded width */
+.flex-group select {
+    flex: 1;
+    min-width: 180px;
+    max-width: 400px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* Buttons: stay compact and aligned */
 .flex-group button {
-    font-size: 13px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* Responsive behavior: stack on small screens */
+@media (max-width: 600px) {
+    .flex-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .flex-group select,
+    .flex-group button {
+        width: 100%;
+        max-width: none;
+    }
 }
 
 /* Status Bar */

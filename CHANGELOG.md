@@ -4,7 +4,7 @@ All notable changes to the "sf-assistant" extension will be documented in this f
 
 <!-- Check [Keep a Changelog](https://keepachangelog.com/) for recommendations on how to structure this file. -->
 
-## [2.1.1] - 2025-10-18
+## [2.1.2] - 2025-10-18
 
 ### Fixed
 
