@@ -6,10 +6,13 @@ export function activate(context: vscode.ExtensionContext) {
 
     context.subscriptions.push(
         vscode.commands.registerCommand('sf-assistant.runSoqlQuery', async () => {
-            await panelManager.createOrShow('soql-panel');
+            await panelManager.createOrShow('data-export');
         }),
         vscode.commands.registerCommand('sf-assistant.metaExplorer', async () => {
             await panelManager.createOrShow('meta-explorer');
+        }),
+        vscode.commands.registerCommand('sf-assistant.dataImport', async () => {
+            await panelManager.createOrShow('data-import');
         }),
         vscode.commands.registerCommand('sf-assistant.clearCache', async () => {
             panelManager.clearCache();

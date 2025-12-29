@@ -2,22 +2,29 @@
     <!-- Sidebar -->
     <div class="meta-sidebar">
         <h2>Metadata Explorer</h2>
-        <input type="text" id="objectNameInput" placeholder="Search objects..." />
+        <input type="text" id="objectNameInput" placeholder="Record Id or Objects..." />
         <label class="tooling-toggle">
-            <input type="checkbox" id="isToolingCheckbox" class="input-checkbox" /> Use Tooling API
+            <input type="checkbox" id="isToolingCheckbox" class="input-checkbox" />Use Tooling API
         </label>
 
-        <div id="objectListContainer" class="object-list"></div>
+        <div id="objectListContainer" class="meta-card-list"></div>
     </div>
 
     <!-- Details Panel -->
     <div class="details">
-        <div class="object-header">
-            <h3 id="objectTitle">Select an object</h3>
-            <button id="moreInfoBtn" class="btn btn-neutral disabled hidden">More Info</button>
+        <div class="meta-card-header">
+            <h3 id="objectTitle">Select an object/Record</h3>
+            <div class="button-row flex-right">
+                <!-- <button id="moreInfoBtn" class="btn btn-primary disabled hidden">
+                    <span class="icon icon-download"></span>More Info
+                </button> -->
+                <button id="downloadMetaBtn" class="btn btn-primary disabled hidden">
+                    <span class="icon icon-download"></span>Download
+                </button>
+            </div>
         </div>
         <div id="objectMetaViewer" class="meta-sections">
-            <p class="info-text">Click an object to view metadata</p>
+            <p class="info-text">Select an object/Record to view metadata</p>
         </div>
     </div>
 </div>

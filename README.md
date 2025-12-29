@@ -9,10 +9,10 @@
 - 📝 Run **SOQL queries** directly from VS Code.
 - 📊 View query results in a clean, interactive **table view** (webview).
 - 🔍 Export data easily to **CSV** or **JSON**.
-- 📁 Explore objects/fields with the **Object Explorer**.
+- 📁 Explore objects/Records/fields with the **Metadata Explorer**.
 - 🧹 Clear cached metadata when needed
 - 🔐 Automatically uses the **currently authenticated Salesforce org** (no extra setup).
-- 🛠️ Configurable **API version** and **cache TTL**.
+- 🛠️ Configurable **cache TTL**.
 
 ---
 
@@ -40,7 +40,7 @@
 1. 🎯 Open the **Command Palette** (`Ctrl+Shift+P` / `Cmd+Shift+P`).
 2. Run one of the following commands:
    - **`SF Assistant: Run SOQL Query`** → execute a query and view results.
-   - **`SF Assistant: Object Explorer`** → browse objects and fields.
+   - **`SF Assistant: Metadata Explorer`** → browse objects, Records and fields.
    - **`SF Assistant: Clear Cache`** → clear cached metadata.
 3. ✍️ Enter your SOQL query or browse metadata.
 4. 👀 View results in the interactive table webview.
@@ -87,16 +87,14 @@ In SOQL Query editor window:
 
 This extension contributes the following settings:
 
-| Setting                   | Type     | Default | Description                                                         |
-| ------------------------- | -------- | ------- | ------------------------------------------------------------------- |
-| `sf-assistant.apiVersion` | `number` | `60.0`  | API version to use for Salesforce queries.                          |
-| `sf-assistant.cacheTTL`   | `number` | `12`    | Time (in hours) to cache metadata (objects, fields, relationships). |
+| Setting                 | Type     | Default | Description                                                         |
+| ----------------------- | -------- | ------- | ------------------------------------------------------------------- |
+| `sf-assistant.cacheTTL` | `number` | `12`    | Time (in hours) to cache metadata (objects, fields, relationships). |
 
 You can update these in VS Code **settings.json**:
 
 ```json
 {
-  "sf-assistant.apiVersion": 61.0,
   "sf-assistant.cacheTTL": 12
 }
 ```

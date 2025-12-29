@@ -1,5 +1,6 @@
 import { dom } from "./dom.js";
-import { state } from "./state.js";
+import { showNotification } from "./main.js";
+import { state, toggleToolingMode } from "./state.js";
 import { hideSuggestions } from "./suggestions.js";
 import { safeUpdateStatus } from "./utils.js";
 import { debounce } from "./utils.js";
@@ -21,19 +22,26 @@ const listeners = {
         const v = e.target.value;
         if (v) {
             dom.queryInput.value = v;
-            safeUpdateStatus('Loaded saved query', 'green');
+            showNotification('Loaded saved query', 'success');
         }
     },
     recentQueryChange: (e) => {
         const v = e.target.value;
         if (v) {
             dom.queryInput.value = v;
-            safeUpdateStatus('Loaded recent query', 'green');
+            showNotification('Loaded recent query', 'success');
         }
     }
 };
 
 export function initQueryActions() {
+    if (!dom.queryInput) {
+        console.warn('Query input not found in DOM');
+        // initialize after a short delay in case DOM is not ready yet
+        setTimeout(initQueryActions, 2000);
+        return;
+    }
+
     // Global keyboard shortcut
     document.addEventListener('keydown', listeners.keydown);
 
@@ -69,20 +77,22 @@ function runQuery() {
     if (dom.queryError) dom.queryError.textContent = '';
     // Throttle suggestion hiding to avoid blocking main thread
     requestAnimationFrame(hideSuggestions);
-    safeUpdateStatus('Running query...');
+    safeUpdateStatus('Running query...', 'black');
     toggeleQueryRunningStatus();
     // Send query asynchronously
     state.vscode.postMessage({ command: 'runQuery', query: q, isTooling: state.isTooling });
 }
 
 export function toggeleQueryRunningStatus(event) {
-    if (state.isRunning && event) {
+    if (state.loading.query && event) {
         safeUpdateStatus('Query stopped', 'orange');
     }
-    state.isRunning = !state.isRunning;
-    dom.runQueryBtn.disabled = state.isRunning;
-    dom.stopQueryBtn.disabled = !state.isRunning;
-
+    state.loading.query = !state.loading.query;
+    dom.runQueryBtn.disabled = state.loading.query;
+    dom.stopQueryBtn.disabled = !state.loading.query;
+    if (dom.resultDiv) {
+        dom.resultDiv.classList.toggle('blurred', state.loading.query);
+    }
 }
 
 function saveQuery() {
@@ -93,7 +103,7 @@ function saveQuery() {
             dom.labelError.textContent = 'Label is required';
             dom.labelError.classList.remove('hidden');
         }
-        safeUpdateStatus('⚠ Label is required', 'red');
+        showNotification('⚠ Label is required', 'error');
         return;
     }
     if (!query) {
@@ -101,12 +111,12 @@ function saveQuery() {
             dom.queryError.textContent = 'Query is required';
             dom.queryError.classList.remove('hidden');
         }
-        safeUpdateStatus('⚠ Query is required', 'red');
+        showNotification('⚠ Query is required', 'error');
         return;
     }
 
     state.vscode.postMessage({ command: 'saveQuery', label, query });
-    safeUpdateStatus(`Saved query "${label}"`, 'green');
+    showNotification(`Saved query "${label}"`, 'success');
     dom.saveLabelInput.value = '';
     dom.queryError.classList.add('hidden');
     dom.labelError.classList.add('hidden');
@@ -115,22 +125,16 @@ function saveQuery() {
 function deleteSelectedQuery() {
     const sel = dom.savedQueriesDropdown.selectedIndex;
     if (!dom.savedQueriesDropdown || sel <= 0) {
-        safeUpdateStatus('⚠ No saved query selected', 'red');
+        showNotification('⚠ No saved query selected', 'error');
         return;
     }
     const label = dom.savedQueriesDropdown.options[sel].text;
     state.vscode.postMessage({ command: 'deleteQuery', label });
-    safeUpdateStatus(`Deleted query "${label}"`, 'green');
+    showNotification(`Deleted query "${label}"`, 'success');
 }
 
 function handleToolingApiChange() {
-    state.isTooling = dom.toolingInput.checked;
-    const objReq = state.isTooling ? 'requestToolingObjectList' : 'requestObjectList';
-    state.vscode.postMessage({
-        command: objReq,
-        objectType: state.currentObject,
-        isTooling: state.isTooling,
-    });
+    toggleToolingMode(dom.toolingInput.checked);
 }
 
 

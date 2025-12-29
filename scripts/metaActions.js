@@ -1,6 +1,6 @@
-import { state } from "./state.js";
+import { getObjectList, getObjectMeta, handleObjectMetadataRequest, hasObjectMeta, state, toggleToolingMode } from "./state.js";
 import { dom } from "./dom.js";
-import { debounce, fetchObjectMetadataIfNeeded } from "./utils.js";
+import { debounce, exportJSON, makeTableSortable } from "./utils.js";
 
 // Store listeners at module level
 const listeners = {
@@ -12,23 +12,16 @@ const listeners = {
  * Initialize Meta Explorer actions
  */
 export function initMetaExplorerActions() {
+    if (!dom.objectListContainer) {
+        console.warn('Meta Explorer DOM not ready');
+        // initialize after a short delay in case DOM is not ready yet
+        setTimeout(initMetaExplorerActions, 2000);
+        return;
+    }
+
     // Set initial tooling state
     if (dom.toolingInput) {
         dom.toolingInput.checked = state.isTooling;
-    }
-
-    // Request object list if not loaded
-    if (!state.isTooling && !state.objectsList) {
-        state.vscode.postMessage({
-            command: "requestObjectList",
-            isTooling: false,
-        });
-    }
-    if (state.isTooling && !state.toolingObjectsList) {
-        state.vscode.postMessage({
-            command: "requestToolingObjectList",
-            isTooling: true,
-        });
     }
 
     // Add event listeners with optional chaining
@@ -37,6 +30,26 @@ export function initMetaExplorerActions() {
 
     // Initial render
     renderVirtualList();
+
+    // if (dom.moreInfoBtn) {
+    //     dom.moreInfoBtn.addEventListener("click", (e) => {
+    //         const objMeta = dom.objectMetaViewer?.objMeta;
+    //         if (!objMeta) {
+    //             return;
+    //         }
+    //         exportJSON(e, objMeta, null, true);
+    //     });
+    // }
+
+    if (dom.downloadMetaBtn) {
+        dom.downloadMetaBtn.addEventListener("click", (e) => {
+            const objMeta = dom.objectMetaViewer?.objMeta;
+            if (!objMeta) {
+                return;
+            }
+            exportJSON(e, objMeta, null, false);
+        });
+    }
 }
 
 /**
@@ -46,8 +59,15 @@ export function renderVirtualList() {
     const container = dom.objectListContainer;
     if (!container) return;
 
-    const searchKey = dom.objectNameInput?.value?.toLowerCase().trim() || "";
-    const objects = state.isTooling ? state.toolingObjectsList : state.objectsList;
+    const metaInputVal = dom.objectNameInput?.value?.trim() || "";
+    const searchKey = metaInputVal?.toLowerCase();
+    let searchKeyPrefix, recordId;
+    if (metaInputVal.length >= 3) {
+        searchKeyPrefix = metaInputVal.slice(0, 3);
+        recordId = metaInputVal.length === 15 || metaInputVal.length === 18 ? metaInputVal : null;
+    }
+
+    const objects = getObjectList();
     if (!objects || !objects.length) {
         container.innerHTML = `<p class="info-text">Loading Objects...</p>`;
         return;
@@ -56,7 +76,7 @@ export function renderVirtualList() {
     const filtered = objects.filter(obj =>
         obj.label?.toLowerCase().includes(searchKey) ||
         obj.name?.toLowerCase().includes(searchKey) ||
-        obj.keyPrefix?.toLowerCase().includes(searchKey)
+        (searchKeyPrefix && obj.keyPrefix?.includes(searchKeyPrefix))
     );
 
     const rowHeight = 70;
@@ -74,8 +94,23 @@ export function renderVirtualList() {
 
     // --- Card Pool ---
     const pool = [];
+
+    // If recordId is provided and matches an object, view its metadata
+    if (recordId) {
+        if (filtered.length >= 1) {
+            let objData = filtered[0];
+            filtered.unshift({
+                label: recordId,
+                labelPlural: recordId,
+                name: objData.name,
+                keyPrefix: objData.keyPrefix,
+                isRecord: true
+            });
+        }
+    }
+
     for (let i = 0; i < visibleCount; i++) {
-        const card = createObjectElem({});
+        const card = createObjectElem();
         card.style.position = "absolute";
         card.style.left = "0";
         card.style.right = "0";
@@ -86,7 +121,6 @@ export function renderVirtualList() {
     function renderRows() {
         const scrollTop = container.scrollTop;
         const startIndex = Math.floor(scrollTop / rowHeight);
-        const endIndex = Math.min(startIndex + visibleCount, filtered.length);
 
         for (let i = 0; i < visibleCount; i++) {
             const index = startIndex + i;
@@ -114,33 +148,46 @@ export function renderVirtualList() {
  */
 function handleToolingApiChange() {
     state.isTooling = dom.toolingInput.checked;
-    const objReq = state.isTooling ? "requestToolingObjectList" : "requestObjectList";
-    state.vscode.postMessage({
-        command: objReq,
-        isTooling: state.isTooling,
-    });
+    toggleToolingMode(state.isTooling);
 }
 
 /**
  * Create object card
  */
-function createObjectElem(obj) {
+function createObjectElem() {
     const card = document.createElement("div");
-    card.className = "object-card";
+    card.className = "meta-card";
+
     card.innerHTML = `
-        <div class="object-header">
-            <span class="object-label"></span>
+        <div class="meta-card-header">
+            <span class="meta-card-label"></span>
             <span class="key-prefix"></span>
         </div>
-        <div class="object-sub"><strong>API:</strong> <span class="api-name"></span></div>
+        <div class="meta-card-sub">
+            <strong>API:</strong>
+            <span class="api-name"></span>
+        </div>
     `;
-    // Add click handler from module-level listeners
-    card.addEventListener("click", () => {
-        if (card.dataset.apiName) {
-            viewObjectMeta(card.dataset.apiName);
+
+    // ---- Cache DOM references ----
+    card._refs = {
+        label: card.querySelector(".meta-card-label"),
+        keyPrefix: card.querySelector(".key-prefix"),
+        apiName: card.querySelector(".api-name")
+    };
+
+    // Click handler (attached once)
+    card.addEventListener("click", (e) => {
+        const apiName = card.dataset.apiName;
+        const metaType = card.dataset.metaType;
+        toggleExportButtons(false);
+        if (apiName && metaType === "record") {
+            viewRecordMeta(card.dataset.recordId, apiName);
+        } else if (apiName) {
+            viewObjectMeta(apiName);
         }
     });
-    updateObjectElem(card, obj); // initial fill
+
     return card;
 }
 
@@ -148,10 +195,36 @@ function createObjectElem(obj) {
  * Update object card (for pooled reuse)
  */
 function updateObjectElem(card, obj) {
-    card.querySelector(".object-label").textContent = obj.label || "";
-    card.querySelector(".key-prefix").textContent = obj.keyPrefix || "N/A";
-    card.querySelector(".api-name").textContent = obj.name || "";
+    const { label, keyPrefix, apiName } = card._refs;
+
+    label.textContent = obj.label || "";
+    keyPrefix.textContent = obj.keyPrefix || "N/A";
+    apiName.textContent = obj.name || "";
+
     card.dataset.apiName = obj.name || "";
+    if (obj.isRecord) {
+        card.dataset.metaType = "record";
+        card.dataset.recordId = obj.label;
+    }
+}
+
+/**
+ * Show metadata for selected object
+ */
+export function viewRecordMeta(recordId, objName) {
+    const viewer = dom.objectMetaViewer;
+    if (!viewer) {
+        console.warn('Meta Viewer DOM not ready');
+        return;
+    }
+
+    document.getElementById("objectTitle").textContent = `${recordId} (${objName})`;
+    viewer.innerHTML = `<p class="info-text">Loading metadata for ${recordId} (${objName})...</p>`;
+    state.vscode.postMessage({ command: 'requestRecordMeta', recordId: recordId, objectType: objName, isTooling: state.isTooling });
+}
+
+export function handleRecordMetadataMessage(recordData) {
+    renderMetaView(recordData, dom.objectMetaViewer);
 }
 
 /**
@@ -163,32 +236,24 @@ export function viewObjectMeta(objName) {
 
     document.getElementById("objectTitle").textContent = objName;
     viewer.innerHTML = `<p class="info-text">Loading metadata for ${objName}...</p>`;
+    handleObjectMetadataRequest(objName);
 
-    fetchObjectMetadataIfNeeded(objName);
-
-    if (state.objectMeta[objName]) {
-        renderObjectMeta(state.objectMeta[objName], viewer);
+    if (hasObjectMeta(objName)) {
+        renderMetaView(getObjectMeta(objName), viewer);
     }
 }
 
 /**
  * Render metadata with lazy collapsibles
  */
-function renderObjectMeta(objMeta, container) {
+function renderMetaView(objMeta, container) {
     if (!container) return;
     container.objMeta = objMeta;
 
     let html = "";
 
     // Root props
-    const primitiveProps = Object.keys(objMeta)
-        .filter(key => {
-            const value = objMeta[key];
-            return value === null || (typeof value !== "object" && !Array.isArray(value));
-        })
-        .map(key => `<tr><td>${key}</td><td>${objMeta[key]}</td></tr>`)
-        .join("");
-
+    const primitiveProps = getPrimitiveProperties(objMeta);
 
     if (primitiveProps) {
         html += renderCollapsibleSection("Object Properties", primitiveProps, ["Property", "Value"]);
@@ -204,8 +269,38 @@ function renderObjectMeta(objMeta, container) {
         html += renderLazySection("Child Relationships", objMeta.childRelationships.length, "relationships", ["Relationship Name", "Child Object", "Field", "Label"]);
     }
 
+    // Create Collapsibles for object/List type properties
+    for (const key in objMeta) {
+        if (key === "fields" || key === "childRelationships") {
+            continue; // already handled
+        }
+        const value = objMeta[key];
+        if (value && typeof value === "object") {
+            if (!Array.isArray(value)) {
+                const subProps = getPrimitiveProperties(value);
+                if (subProps) {
+                    html += renderCollapsibleSection(key, subProps, ["Property", "Value"]);
+                }
+            } else if (Array.isArray(value) && value.length > 0 && typeof value[0] === "object") {
+                const subProps = getPrimitiveProperties(value[0]);
+                html += renderLazySection(key, value.length, key, Object.keys(value[0]));
+            }
+        }
+    }
+
     container.innerHTML = html;
     initCollapsibles(container);
+    toggleExportButtons(true);
+}
+
+function getPrimitiveProperties(obj) {
+    return Object.keys(obj)
+        .filter(key => {
+            const value = obj[key];
+            return value === null || (typeof value !== "object" && !Array.isArray(value));
+        })
+        .map(key => `<tr><td>${key}</td><td>${obj[key]}</td></tr>`)
+        .join("");
 }
 
 /**
@@ -213,7 +308,7 @@ function renderObjectMeta(objMeta, container) {
  */
 function renderCollapsibleSection(title, rowsHtml, headers = []) {
     const table = headers.length
-        ? `<table class="meta-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rowsHtml}</tbody></table>`
+        ? `<table class="table-base meta-table"><thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead><tbody>${rowsHtml}</tbody></table>`
         : rowsHtml;
 
     return `
@@ -241,7 +336,7 @@ function renderLazySection(title, count, sectionType, headers = []) {
 }
 
 /**
- * Initialize collapsibles
+ * Initialize collapsibles with sortable tables
  */
 function initCollapsibles(container) {
     container.querySelectorAll(".collapsible-section").forEach(section => {
@@ -311,7 +406,7 @@ function initCollapsibles(container) {
                                 </tr>`;
                     }).join("");
 
-                    content.innerHTML = `<table class="meta-table">
+                    content.innerHTML = `<table class="table-base meta-table">
                             <thead><tr>${extendedHeaders.map(h => `<th>${h}</th>`).join("")}</tr></thead>
                             <tbody>${rows}</tbody>
                         </table>`;
@@ -325,10 +420,16 @@ function initCollapsibles(container) {
                                 <td>${r.label || ""}</td>
                             </tr>`).join("");
 
-                    content.innerHTML = `<table class="meta-table">
+                    content.innerHTML = `<table class="table-base meta-table">
                             <thead><tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr></thead>
                             <tbody>${rows}</tbody>
                         </table>`;
+                }
+
+                // Make table sortable
+                const table = content.querySelector(".meta-table");
+                if (table) {
+                    makeTableSortable(table);
                 }
 
                 // Add click listeners for child links
@@ -344,4 +445,21 @@ function initCollapsibles(container) {
             }
         });
     });
+}
+
+function toggleExportButtons(enabled) {
+    // if (dom.moreInfoBtn) {
+    //     if (enabled) {
+    //         dom.moreInfoBtn.classList.remove("hidden");
+    //     } else {
+    //         dom.moreInfoBtn.classList.add("hidden");
+    //     }
+    // }
+    if (dom.downloadMetaBtn) {
+        if (enabled) {
+            dom.downloadMetaBtn.classList.remove("hidden");
+        } else {
+            dom.downloadMetaBtn.classList.add("hidden");
+        }
+    }
 }

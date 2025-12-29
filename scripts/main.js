@@ -1,9 +1,10 @@
 import { initSuggestions } from "./suggestions.js";
 import { initQueryActions } from "./queryActions.js";
 import { initMessaging } from "./messaging.js";
-import { dom, initMainDom, initMetaDom, initSoqlDom } from "./dom.js";
-import { state } from "./state.js";
+import { dom, initDataImportDom, initMainDom, initMetaDom, initSoqlDom } from "./dom.js";
+import { initStateForPage, state } from "./state.js";
 import { initMetaExplorerActions } from "./metaActions.js";
+import { initDataImportActions } from "./dataImportActions.js";
 import { openSettings } from "./settings.js";
 
 /**
@@ -78,7 +79,7 @@ async function loadPage(pageName) {
     const content = dom.content;
     try {
         if (!state || !state.vscode || typeof state.vscode.postMessage !== 'function') {
-            console.warn('state.vscode.postMessage is not available — skipping host loadPage call.');
+            console.warn('[SF Assistant] state.vscode.postMessage is not available — skipping host loadPage call.');
             if (content) content.innerHTML = `<p style="color:orange;">(Dev) Would load page: ${pageName}</p>`;
             return;
         }
@@ -95,7 +96,7 @@ async function loadPage(pageName) {
 export async function injectPage(pageName, pageContent) {
     const content = dom.content;
     try {
-        state.pageName = pageName;
+        const previousPageName = state.pageName;
         if (!content) {
             console.error('injectPage: #content not found');
             return;
@@ -103,21 +104,30 @@ export async function injectPage(pageName, pageContent) {
 
         // Page-specific inits
         switch (pageName) {
-            case 'soql-panel':
+            case 'data-export':
                 content.innerHTML = pageContent ?? '<p>No content</p>';
                 activateNavLink(pageName);
                 initSoqlDom();
                 initSuggestions();
                 initQueryActions();
+                initStateForPage(pageName);
                 break;
             case 'meta-explorer':
                 content.innerHTML = pageContent ?? '<p>No content</p>';
                 activateNavLink(pageName);
                 initMetaDom();
                 initMetaExplorerActions();
+                initStateForPage(pageName);
+                break;
+            case 'data-import':
+                content.innerHTML = pageContent ?? '<p>No content</p>';
+                activateNavLink(pageName);
+                initDataImportDom();
+                initDataImportActions();
+                initStateForPage(pageName);
                 break;
             case 'settings':
-                openSettings(pageContent);
+                openSettings(pageContent, previousPageName);
                 break;
             default:
                 console.log('Injected page:', pageName);
@@ -128,6 +138,25 @@ export async function injectPage(pageName, pageContent) {
         if (content) content.innerHTML = `<p style="color:red;">Failed to load page: ${pageName}</p>`;
     }
 }
+
+export function showNotification(message, type = "success") {
+    const container = document.getElementById("notificationContainer");
+    if (!container) {
+        console.error("Notification container not found");
+        return;
+    }
+    // Create toast element
+    const toast = document.createElement("div");
+    toast.classList.add("toast", `toast-${type}`);
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    // Remove after animation (5 seconds)
+    setTimeout(() => {
+        toast.remove();
+    }, 5000);
+}
+
 
 function activateNavLink(pageName) {
     // Ensure sidebar active state is consistent

@@ -148,11 +148,28 @@ export async function callApi<T = any>(url: string, options: ApiOptions = {}): P
     if (!response.ok) {
         const errorText = await response.text();
         throw new Error(
-            `API call failed: ${response.status} ${response.statusText} - ${errorText}`
+            `API call failed: ${response.status} ${response.statusText}`,
+            { cause: { status: response.status, statusText: response.statusText, message: errorText } }
         );
     }
 
-    return response.json() as Promise<T>;
+    // Handle 204 No Content (empty response body)
+    if (response.status === 204) {
+        return null as any;
+    }
+
+    // Only try to parse JSON if there's content
+    const contentLength = response.headers.get('content-length');
+    if (contentLength === '0') {
+        return null as any;
+    }
+
+    const text = await response.text();
+    if (!text) {
+        return null as any;
+    }
+
+    return JSON.parse(text) as Promise<T>;
 }
 
 interface ErrorAction {

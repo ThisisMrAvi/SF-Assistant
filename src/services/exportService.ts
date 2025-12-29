@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getTempDir } from './utils';
+import { getTempDir } from '../utils';
 
 export function saveFileToWorkspace(content: string, filename: string, ext: string) {
     if (!vscode.workspace.workspaceFolders) {

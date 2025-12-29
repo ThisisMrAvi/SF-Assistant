@@ -4,13 +4,26 @@ All notable changes to the "sf-assistant" extension will be documented in this f
 
 <!-- Check [Keep a Changelog](https://keepachangelog.com/) for recommendations on how to structure this file. -->
 
-## [2.1.2] - 2025-10-18
+## [2.2.0]
+
+### Added
+
+- **Data Import** — Insert, update, upsert, delete and undelete Salesforce records directly from the extension.
+- **Copy Result** — Quickly copy import job results with a single click.
+
+### Fixed
+
+- Improved overall performance and stability.
+- Resolved an issue where only the first 50 records were displayed in some cases.
+- Fixed minor bugs and UI inconsistencies.
+
+## [2.1.2]
 
 ### Fixed
 
 - Fixed minor bug
 
-## [2.1.0] - 2025-10-10
+## [2.1.0]
 
 ### Added
 
@@ -24,19 +37,19 @@ All notable changes to the "sf-assistant" extension will be documented in this f
 - Improved overall performance and resolved memory leaks.
 - Fixed several minor bugs and UI inconsistencies.
 
-## [2.0.0] - 2025-09-12
+## [2.0.0]
 
 ### Added
 
-- **Object Explorer**: browse object metadata, fields, and child relationships.
-- **Navigation sidebar**: switch between SOQL Query and Object Explorer without reloading.
+- **Metadata Explorer**: browse object metadata, fields, and child relationships.
+- **Navigation sidebar**: switch between SOQL Query and Metadata Explorer without reloading.
 
 ### Fixed
 
 - Resolved issues in SOQL Query editor.
 - Fixed value suggestions for picklist
 
-## [1.0.0] - 2025-09-02
+## [1.0.0]
 
 ### Added
 
@@ -46,4 +59,4 @@ All notable changes to the "sf-assistant" extension will be documented in this f
 - Ability to **export results** to CSV or JSON formats.
 - Option to **clear cached metadata** to refresh schema definitions.
 - Automatically connects to the **currently authenticated Salesforce org** (no manual setup required).
-- Settings to configure **Salesforce API version** and **data cache duration**.
+- Settings to configure **data cache duration**.

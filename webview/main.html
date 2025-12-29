@@ -8,14 +8,21 @@
     <title>Salesforce Assistant</title>
 </head>
 
+
 <body>
+    <!-- Notification toast -->
+    <div id="notificationContainer">
+    </div>
+
+    <!-- Sidebar -->
     <div id="sidebar" class="sidebar">
         <div class="sidebar-header">
             <h2>SF Assistant</h2>
             <button id="closeSidebarBtn" class="close-btn">&times;</button>
         </div>
-        <a href="" data-page="soql-panel">Open SOQL Query</a>
-        <a href="" data-page="meta-explorer">Object Explorer</a>
+        <a href="" data-page="meta-explorer">Metadata Explorer</a>
+        <a href="" data-page="data-export">Data Export</a>
+        <a href="" data-page="data-import">Data Import</a>
         <a href="" data-page="settings">Settings</a>
         <div class="footer" style="bottom: 0px">
             <p class="info-text">
@@ -23,6 +30,8 @@
             </p>
         </div>
     </div>
+
+    <!-- Main container -->
     <div id="sf-assistant-container">
         <div class="header-container">
             <button id="appBtn" class="menu-btn">☰</button>

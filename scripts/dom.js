@@ -60,6 +60,34 @@ export function initMetaDom() {
     dom.toolingInput = document.getElementById('isToolingCheckbox');
     dom.objectListContainer = document.getElementById('objectListContainer');
     dom.objectMetaViewer = document.getElementById('objectMetaViewer');
-    dom.moreInfoBtn = document.getElementById('moreInfoBtn');
+    // dom.moreInfoBtn = document.getElementById('moreInfoBtn');
+    dom.downloadMetaBtn = document.getElementById('downloadMetaBtn');
 }
 
+export function initDataImportDom() {
+    // Data Import dom elements
+    dom.fileInput = document.getElementById('fileInput');
+    dom.startImportBtn = document.getElementById('startImportBtn');
+    dom.dataInput = document.getElementById('dataInput');
+    dom.objectName = document.getElementById('objectName');
+    dom.apiType = document.getElementById('apiType');
+    dom.actionType = document.getElementById('actionType');
+    dom.batchSize = document.getElementById('batchSize');
+    dom.threads = document.getElementById('threads');
+    dom.runDataLoadBtn = document.getElementById('runDataLoadBtn');
+    dom.cancelDataLoadBtn = document.getElementById('cancelDataLoadBtn');
+    dom.retryButton = document.getElementById('retryFailedBtn');
+    // preview components
+    dom.previewContainer = document.getElementById('dataPreviewContainer');
+    dom.copyPreviewCSVBtn = document.getElementById('copyPreviewCSVBtn');
+    dom.copyPreviewJSONBtn = document.getElementById('copyPreviewJSONBtn');
+
+    // results components
+    dom.importResultsSection = document.getElementById('importResultsSection');
+    dom.importSummaryDiv = document.getElementById('importSummary');
+    dom.importResultsTable = document.getElementById('importResultsTable');
+    dom.copyResultsCSVBtn = document.getElementById('copyResultsCSVBtn');
+    dom.copyResultsJSONBtn = document.getElementById('copyResultsJSONBtn');
+    dom.exportResultsCSVBtn = document.getElementById('exportResultsCSVBtn');
+    dom.exportResultsJSONBtn = document.getElementById('exportResultsJSONBtn');
+}

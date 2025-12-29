@@ -5,7 +5,7 @@
   "version": "2.1.2",
   "icon": "assets/sf_assist_logo_round_128x.png",
   "pricing": "Free",
-  "license": "BSD-3-Clause",
+  "license": "MIT",
   "author": {
     "name": "Avinash Kumar"
   },
@@ -48,7 +48,11 @@
       },
       {
         "command": "sf-assistant.metaExplorer",
-        "title": "SF Assistant: Object Explorer"
+        "title": "SF Assistant: Metadata Explorer"
+      },
+      {
+        "command": "sf-assistant.dataImport",
+        "title": "SF Assistant: Data Import"
       },
       {
         "command": "sf-assistant.clearCache",
@@ -60,11 +64,6 @@
       "description": "Settings for Salesforce Assistant extension.",
       "type": "object",
       "properties": {
-        "sf-assistant.apiVersion": {
-          "type": "number",
-          "default": 60,
-          "description": "API version"
-        },
         "sf-assistant.cacheTTL": {
           "type": "number",
           "default": 12,

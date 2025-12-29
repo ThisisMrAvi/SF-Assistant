@@ -1,6 +1,6 @@
-import { state, operatorSuggestions, dateLiterals } from "./state.js";
+import { state, operatorSuggestions, dateLiterals, handleObjectListRequest, handleObjectMetadataRequest, getObjectList, getObjectMeta } from "./state.js";
 import { dom } from "./dom.js";
-import { sendTextUpdateEvent, debounce, fetchObjectMetadataIfNeeded, validObjectName } from "./utils.js";
+import { sendTextUpdateEvent, debounce, validObjectName } from "./utils.js";
 
 // ------------------------
 // Config
@@ -13,12 +13,58 @@ const listeners = {
     keydown: handleQueryKeyDown
 };
 
+// Cache for suggestion elements (optimizes setSelected to O(1))
+let suggestionElements = [];
+
+// Debounced focus handler to reduce DOM query frequency
+const debouncedSetSelected = debounce(setSelected, 50);
+
+// Delegated event listener for suggestions
+function handleSuggestionClick(ev) {
+    const suggestionElm = ev.target.closest('.suggestion-item');
+    if (suggestionElm && suggestionElm.dataset.value) {
+        ev.preventDefault();
+        insertSuggestion(suggestionElm.dataset.value);
+    }
+}
+
+function handleSuggestionKeyDown(ev) {
+    if (ev.key !== 'Enter') {
+        return;
+    }
+    const suggestionElm = ev.target.closest('.suggestion-item');
+    if (!suggestionElm || !suggestionElm.dataset.value) {
+        return;
+    }
+    if (ev.ctrlKey || ev.shiftKey || ev.altKey || ev.metaKey) {
+        return;
+    }
+    ev.preventDefault();
+    insertSuggestion(suggestionElm.dataset.value);
+}
+
+function handleSuggestionFocus(ev) {
+    const suggestionElm = ev.target.closest('.suggestion-item');
+    if (!suggestionElm) {
+        return;
+    }
+    const idx = suggestionElements.indexOf(suggestionElm);
+    if (idx >= 0) {
+        debouncedSetSelected(idx);
+    }
+}
+
 // ------------------------
 // Initialization
 // ------------------------
 export function initSuggestions() {
     dom.queryInput?.addEventListener('input', listeners.input);
     dom.queryInput?.addEventListener('keydown', listeners.keydown);
+
+    // Attach delegated listeners to suggestions container
+    dom.suggestionItems?.addEventListener('click', handleSuggestionClick);
+    dom.suggestionItems?.addEventListener('keydown', handleSuggestionKeyDown);
+    dom.suggestionItems?.addEventListener('focus', handleSuggestionFocus, true);
 }
 
 // ------------------------
@@ -37,9 +83,9 @@ export function showSuggestions(token, type, field) {
                     return;
                 }
                 dom.suggestionsTitle.textContent = `${state.currentObject} Field Suggestions:`;
-                const meta = state.objectMeta[state.currentObject];
+                const meta = getObjectMeta(state.currentObject);
                 if (!meta) {
-                    fetchObjectMetadataIfNeeded(state.currentObject);
+                    handleObjectMetadataRequest(state.currentObject);
                     showLoadingText(type);
                     return;
                 }
@@ -48,7 +94,12 @@ export function showSuggestions(token, type, field) {
 
             case "object":
                 dom.suggestionsTitle.textContent = "Object Suggestions:";
-                list = state.isTooling ? state.toolingObjectsList : state.objectsList;
+                list = getObjectList();
+
+                // If object list is empty and not already loading, request it
+                if ((!list || list.length === 0)) {
+                    handleObjectListRequest();
+                }
                 break;
 
             case "operator":
@@ -72,7 +123,6 @@ export function showSuggestions(token, type, field) {
                 break;
 
             default:
-                dom.suggestionsTitle.textContent = "Suggestions:";
                 break;
         }
 
@@ -118,6 +168,10 @@ export function showSuggestions(token, type, field) {
             dom.suggestionItems.innerHTML = "";
             dom.suggestionItems.appendChild(frag);
             dom.suggestionItems.style.display = "flex";
+
+            // Cache suggestion elements for O(1) setSelected() lookups
+            suggestionElements = Array.from(dom.suggestionItems.getElementsByClassName('suggestion-item'));
+
             state.suggestionVisible = true;
             state.selectedSuggestionIndex = 0;
         });
@@ -154,23 +208,16 @@ function createSuggestionElm(idx, type, itemName, itemLabel, itemType) {
     labelSpan.textContent = itemName;
     div.appendChild(labelSpan);
 
-    div.onclick = (ev) => { ev.preventDefault(); insertSuggestion(itemName); };
-    div.onkeydown = (ev) => {
-        if (ev.key === 'Enter' && !ev.ctrlKey && !ev.shiftKey && !ev.altKey && !ev.metaKey) {
-            ev.preventDefault();
-            insertSuggestion(itemName);
-        }
-    };
-    div.onfocus = () => setSelected(idx);
     return div;
 }
 
 function setSelected(idx) {
-    const items = Array.from(dom.suggestionItems.getElementsByClassName('suggestion-item'));
-    if (!items.length) return;
-    items.forEach(it => it.classList.remove('selected'));
-    state.selectedSuggestionIndex = Math.max(0, Math.min(idx, items.length - 1));
-    items[state.selectedSuggestionIndex]?.classList.add('selected');
+    if (!suggestionElements.length) {
+        return;
+    }
+    suggestionElements.forEach(it => it.classList.remove('selected'));
+    state.selectedSuggestionIndex = Math.max(0, Math.min(idx, suggestionElements.length - 1));
+    suggestionElements[state.selectedSuggestionIndex]?.classList.add('selected');
 }
 
 function insertSuggestion(suggestion) {
@@ -199,8 +246,13 @@ function insertSuggestion(suggestion) {
 
 export function hideSuggestions() {
     state.suggestionVisible = false;
-    dom.suggestionsContainer.style.display = 'none';
-    dom.suggestionItems.innerHTML = '';
+    if (dom.suggestionsContainer) {
+        dom.suggestionsContainer.style.display = 'none';
+    }
+    if (dom.suggestionItems) {
+        dom.suggestionItems.innerHTML = '';
+    }
+    suggestionElements = [];
     state.selectedSuggestionIndex = -1;
 }
 
@@ -384,10 +436,10 @@ function handleQueryInput(e) {
         return;
     }
     state.currentObject = validObj.name;
-    fetchObjectMetadataIfNeeded(validObj.name);
+    handleObjectMetadataRequest(validObj.name);
 
     if (info.parentName && info.parentName !== validObj.name) {
-        fetchObjectMetadataIfNeeded(info.parentName);
+        handleObjectMetadataRequest(info.parentName);
     }
 
     // Dot notation (relationship) e.g. Account.Owner.
@@ -457,7 +509,7 @@ function handleRelatedObj(relObjParts) {
                 const relNode = currObjFields.find(item => item.relationshipName === element);
                 if (relNode && relNode.referenceTo && relNode.referenceTo.length) {
                     state.currentObject = relNode.referenceTo[0];
-                    fetchObjectMetadataIfNeeded(state.currentObject);
+                    handleObjectMetadataRequest(state.currentObject);
                 }
                 showSuggestions(state.token, 'field');
             }

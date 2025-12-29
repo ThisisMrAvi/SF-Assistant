@@ -72,6 +72,15 @@ export class CacheManager {
         }
     }
 
+    delete(key: string, namespace: string = 'default'): boolean {
+        const cacheKey = `${namespace}:${key}`;
+        const deleted = this.caches.delete(cacheKey);
+        if (deleted) {
+            this.cacheHits.delete(cacheKey);
+        }
+        return deleted;
+    }
+
     private getCurrentCacheSize(): number {
         let totalSize = 0;
         for (const entry of this.caches.values()) {

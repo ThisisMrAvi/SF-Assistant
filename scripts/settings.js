@@ -5,6 +5,7 @@ import { BaseModal } from "./baseModal.js";
 
 class SettingsModal extends BaseModal {
     #initialized = false;
+    #previousPageName = null;
     #listeners = {
         themeChange: (e) => {
             const selectedTheme = e.target.value;
@@ -60,6 +61,18 @@ class SettingsModal extends BaseModal {
         this.#updateOrgInfo();
     }
 
+    close() {
+        // Restore the previous page name when closing settings modal
+        if (this.#previousPageName) {
+            state.pageName = this.#previousPageName;
+        }
+        super.close();
+    }
+
+    setPreviousPageName(pageName) {
+        this.#previousPageName = pageName;
+    }
+
     #updateOrgInfo() {
         const orgInfo = state.orgInfo;
         if (!orgInfo) {
@@ -85,11 +98,12 @@ class SettingsModal extends BaseModal {
 
 // Exported entry
 export let settingsModal;
-export function openSettings(htmlContent) {
+export function openSettings(htmlContent, previousPageName) {
     if (!settingsModal) {
         settingsModal = new SettingsModal();
     }
     settingsModal.setModalContent("Settings", htmlContent);
+    settingsModal.setPreviousPageName(previousPageName);
     initSettingsDom(); // Initialize DOM references first
     settingsModal.init(); // Will only add listeners once
     settingsModal.open();

@@ -59,32 +59,30 @@
     <div id="statusBar"></div>
 
     <!-- Results -->
-    <div class="result-container">
-
-        <div id="resultContainer" class="hidden">
-            <!-- Export -->
-            <div class="flex-container border-top">
-                <div class="filter-container">
-                    <input id="filterInput" type="search" placeholder="Filter Results" value="">
-                </div>
-                <div class="flex-group">
-                    <div id="filterResultText" class="info-text"></div>
-                </div>
-                <div class="flex-group export-btns">
-                    <button id="hideAttBtn" class="btn btn-neutral">
-                        <span class="icon icon-hide"></span></button>
-                    <button id="copyCSVBtn" class="btn btn-neutral">
-                        <span class="icon icon-copy"></span> Copy CSV</button>
-                    <button id="copyJSONBtn" class="btn btn-neutral">
-                        <span class="icon icon-copy"></span> Copy JSON</button>
-                    <button id="exportCSVBtn" class="btn btn-primary">Export CSV</button>
-                    <button id="exportJSONBtn" class="btn btn-primary">Export JSON</button>
-                </div>
+    <div id="resultContainer" class="result-container hidden">
+        <!-- Export -->
+        <div class="flex-container border-top">
+            <div class="filter-container">
+                <input id="filterInput" type="search" placeholder="Filter Results" value="">
             </div>
-
-            <!-- Result table -->
-            <div id="resultTable"></div>
+            <div class="flex-group">
+                <div id="filterResultText" class="info-text"></div>
+            </div>
+            <div class="flex-group export-btns">
+                <button id="hideAttBtn" class="btn btn-neutral">
+                    <span class="icon icon-hide"></span></button>
+                <button id="copyCSVBtn" class="btn btn-neutral">
+                    <span class="icon icon-copy"></span> Copy CSV</button>
+                <button id="copyJSONBtn" class="btn btn-neutral">
+                    <span class="icon icon-copy"></span> Copy JSON</button>
+                <button id="exportCSVBtn" class="btn btn-primary">
+                    <span class="icon icon-download"></span>Export CSV</button>
+                <button id="exportJSONBtn" class="btn btn-primary">
+                    <span class="icon icon-download"></span>Export JSON</button>
+            </div>
         </div>
 
+        <!-- Result table -->
+        <div id="resultTable" class="table-base records-table"></div>
     </div>
 </div>

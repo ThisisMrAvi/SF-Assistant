@@ -1,0 +1,124 @@
+<div class="data-import-container">
+
+    <!-- Configure Import -->
+    <div class="card-base">
+        <h2>Configure Data Load</h2>
+
+        <div class="form-grid">
+
+            <!-- API Type -->
+            <div class="form-field">
+                <label for="apiType">API Type</label>
+                <select id="apiType">
+                    <option value="enterprise">Enterprise (default)</option>
+                    <option value="tooling">Tooling</option>
+                    <!-- <option value="metadata">Metadata</option> -->
+                </select>
+            </div>
+
+            <!-- Action -->
+            <div class="form-field">
+                <label for="actionType">Action</label>
+                <select id="actionType">
+                    <option value="insert">Insert</option>
+                    <option value="update" selected>Update</option>
+                    <option value="upsert">Upsert</option>
+                    <option value="delete">Delete</option>
+                    <option value="undelete">Undelete</option>
+                </select>
+            </div>
+
+            <!-- Object -->
+            <div class="form-field">
+                <label for="objectName">Object</label>
+                <input type="text" id="objectName" placeholder="Account" autocomplete="off" />
+            </div>
+
+            <!-- Data -->
+            <div class="form-field span-2">
+                <label for="dataInput">Data</label>
+                <textarea id="dataInput"
+                    placeholder="Paste CSV or JSON data here. Example:&#10;&quot;Id&quot;,&quot;Email&quot;,&quot;Phone&quot;&#10;&quot;001xx&quot;,&quot;test@example.com&quot;,&quot;123-456&quot;"></textarea>
+            </div>
+
+            <!-- Batch Size -->
+            <div class="form-field">
+                <label for="batchSize">Batch size</label>
+                <input type="number" id="batchSize" value="200" min="1" max="2000" />
+            </div>
+
+            <!-- Threads -->
+            <div class="form-field">
+                <label for="threads">Threads</label>
+                <input type="number" id="threads" value="6" min="1" max="6" />
+            </div>
+
+        </div>
+
+        <div class="button-row">
+            <button class="btn btn-primary" id="runDataLoadBtn">Run Update</button>
+            <button class="btn" id="cancelDataLoadBtn" disabled>Cancel Queued</button>
+            <button class="btn" id="retryFailedBtn" disabled>Retry Failed</button>
+        </div>
+    </div>
+
+    <!-- Field Mapping -->
+    <div class="card-base">
+        <h2>Field Mapping</h2>
+        <p class="info-text">Fields detected from your data. Click - to skip a field.</p>
+        <div id="fieldMappingContainer" class="container-small">
+            <!-- Dynamically populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Data Preview Section -->
+    <div class="card-base">
+        <div class="flex-group">
+            <div class="header">
+                <h2>Data Preview</h2>
+                <p class="info-text">Records to be sent to Salesforce</p>
+            </div>
+
+            <div id="previewButtonRow" class="button-row flex-right" style="display: none; margin-top: 12px;">
+                <button class="btn btn-neutral" id="copyPreviewCSVBtn">
+                    <span class="icon icon-copy"></span> Copy Preview (CSV)
+                </button>
+                <button class="btn btn-neutral" id="copyPreviewJSONBtn">
+                    <span class="icon icon-copy"></span> Copy Preview (JSON)
+                </button>
+            </div>
+        </div>
+
+        <div id="dataPreviewContainer" class="table-base records-table container-small hidden">
+            <!-- Dynamically populated by JavaScript with data table -->
+        </div>
+    </div>
+
+    <!-- Result Table Section -->
+    <div class="card-base hidden" id="importResultsSection">
+        <div class="flex-group">
+            <div class="header">
+                <h2>Import Results</h2>
+                <p class="info-text">Summary and results of the data load operation</p>
+            </div>
+            <div id="resultsButtonRow" class="button-row flex-right hidden">
+                <button class="btn btn-neutral" id="copyResultsCSVBtn">
+                    <span class="icon icon-copy"></span> Copy Results (CSV)
+                </button>
+                <button class="btn btn-neutral" id="copyResultsJSONBtn">
+                    <span class="icon icon-copy"></span> Copy Results (JSON)
+                </button>
+                <button id="exportResultsCSVBtn" class="btn btn-primary">
+                    <span class="icon icon-download"></span>Export Results (CSV)</button>
+                <button id="exportResultsJSONBtn" class="btn btn-primary">
+                    <span class="icon icon-download"></span>Export Results (JSON)</button>
+            </div>
+        </div>
+        <div id="importSummary" class="data-load-summary">
+            <!-- Dynamically populated by JavaScript with summary info -->
+        </div>
+        <div id="importResultsTable" class="table-base records-table">
+            <!-- Dynamically populated by JavaScript with results table -->
+        </div>
+    </div>
+</div>

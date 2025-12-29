@@ -1,16 +1,18 @@
 import { dom } from "./dom.js";
 import { state } from "./state.js";
-import { debounce, handleCopy } from './utils.js';
+import { exportCSV, exportJSON } from './utils.js';
 
 // Store listeners at module level so they persist between function calls
 const listeners = {
     hideAtt: (e) => toggleAttributeColumns(e),
-    copyCSV: (e) => exportCSV(e, true),
-    copyJSON: (e) => exportJSON(e, true),
-    exportCSV: (e) => exportCSV(e, false),
-    exportJSON: (e) => exportJSON(e, false),
+    copyCSV: (e) => exportCSV(e, null, dom.resultDiv, true),
+    copyJSON: (e) => exportJSON(e, null, dom.resultDiv, true),
+    exportCSV: (e) => exportCSV(e, null, dom.resultDiv, false),
+    exportJSON: (e) => exportJSON(e, null, dom.resultDiv, false),
     filter: filterTable
 };
+
+const RENDER_BATCH_SIZE = 2000;
 
 export function initResultActions() {
     // Clean setup - each element only gets one listener
@@ -63,14 +65,12 @@ export function renderResults(result) {
     }
     if (!result || !result.records || !result.records.length) {
         dom.resultContainer.classList.add('hidden');
-        dom.resultDiv.classList.remove('records-table');
         dom.resultDiv.innerHTML = '<p class="no-data">No records found</p>';
         return;
     }
 
     initResultActions();
     dom.resultContainer.classList.remove('hidden');
-    dom.resultDiv.classList.add('records-table');
 
     const rows = result.records;
     const flattenedRows = rows.map(r => flattenRecord(r));
@@ -101,7 +101,7 @@ export function renderResults(result) {
     const tbody = document.createElement('tbody');
 
     // Create initial set of rows
-    const initialRowCount = Math.min(50, flattenedRows.length);
+    const initialRowCount = Math.min(RENDER_BATCH_SIZE, flattenedRows.length);
     for (let i = 0; i < initialRowCount; i++) {
         tbody.appendChild(createTableRow(flattenedRows[i], keys));
     }
@@ -113,12 +113,18 @@ export function renderResults(result) {
     dom.resultDiv.innerHTML = '';
     dom.resultDiv.appendChild(fragment);
 
-    // Initialize lazy loading for remaining rows
+    // Store data for loading more rows
+    dom.resultDiv._allRows = flattenedRows;
+    dom.resultDiv._keys = keys;
+    dom.resultDiv._currentIndex = initialRowCount;
+    dom.resultDiv._tbody = tbody;
+
+    // Initialize "Load More" button if there are more rows
     if (flattenedRows.length > initialRowCount) {
-        initLazyLoading(tbody, flattenedRows, initialRowCount, keys);
+        initLoadMoreButton(flattenedRows.length);
     }
 
-    dom.filterResultText.innerText = `Showing ${result.records.length} records`;
+    dom.filterResultText.innerText = `Showing ${initialRowCount} of ${result.records.length} records`;
 }
 
 function flattenRecord(record, parentKey = '', result = {}) {
@@ -170,33 +176,50 @@ function createTableRow(rowData, keys) {
     return tr;
 }
 
-function initLazyLoading(tbody, allRows, startIndex, keys) {
-    const batchSize = 50;
-    let currentIndex = startIndex;
+function initLoadMoreButton(totalRows) {
+    // Remove existing load more button if present
+    const existingBtn = dom.resultDiv.querySelector('.load-more-btn-container');
+    if (existingBtn) {
+        existingBtn.remove();
+    }
 
-    const loadMoreRows = () => {
-        const scrollElement = tbody.parentElement;
-        const threshold = 100; // pixels from bottom
+    // Create container for load more button
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'load-more-btn-container';
+    buttonContainer.style.cssText = 'text-align: center; padding: 16px; margin-top: 10px;';
 
-        if (scrollElement.scrollHeight - (scrollElement.scrollTop + scrollElement.clientHeight) < threshold) {
-            const fragment = document.createDocumentFragment();
-            const endIndex = Math.min(currentIndex + batchSize, allRows.length);
+    const loadMoreBtn = document.createElement('button');
+    loadMoreBtn.className = 'load-more-btn';
+    loadMoreBtn.textContent = `Load ${RENDER_BATCH_SIZE} More`;
+    loadMoreBtn.style.cssText = 'padding: 8px 16px; background: var(--button-bg); color: var(--button-text); border: none; border-radius: 4px; cursor: pointer; font-size: 14px;';
 
-            for (let i = currentIndex; i < endIndex; i++) {
-                fragment.appendChild(createTableRow(allRows[i], keys));
-            }
+    loadMoreBtn.addEventListener('click', () => {
+        const allRows = dom.resultDiv._allRows;
+        const keys = dom.resultDiv._keys;
+        const tbody = dom.resultDiv._tbody;
+        let currentIndex = dom.resultDiv._currentIndex;
+        const batchSize = Math.max(RENDER_BATCH_SIZE, Math.ceil(totalRows / 5));
 
-            tbody.appendChild(fragment);
-            currentIndex = endIndex;
-
-            if (currentIndex >= allRows.length) {
-                scrollElement.removeEventListener('scroll', scrollHandler);
-            }
+        // Load next batch
+        const endIndex = Math.min(currentIndex + batchSize, allRows.length);
+        for (let i = currentIndex; i < endIndex; i++) {
+            tbody.appendChild(createTableRow(allRows[i], keys));
         }
-    };
 
-    const scrollHandler = debounce(loadMoreRows, 100);
-    tbody.parentElement.addEventListener('scroll', scrollHandler);
+        currentIndex = endIndex;
+        dom.resultDiv._currentIndex = currentIndex;
+
+        // Update count
+        dom.filterResultText.innerText = `Showing ${currentIndex} of ${totalRows} records`;
+
+        // Remove button if all rows loaded
+        if (currentIndex >= allRows.length) {
+            buttonContainer.remove();
+        }
+    });
+
+    buttonContainer.appendChild(loadMoreBtn);
+    dom.resultDiv.appendChild(buttonContainer);
 }
 
 function filterTable() {
@@ -227,65 +250,3 @@ function filterTable() {
             : `Showing ${rows.length} records`;
     });
 }
-
-// Export handlers
-function exportCSV(e, isCopy) {
-    const table = dom.resultDiv.querySelector('table');
-    if (!table) { return; }
-
-    // Get visible headers and their indices
-    const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
-    const visibleColumns = headers.reduce((acc, th, index) => {
-        if (!th.classList.contains('hidden')) {
-            acc.push(index);
-        }
-        return acc;
-    }, []);
-
-    // Map rows with only visible columns
-    const rows = Array.from(table.querySelectorAll('tr:not(.hidden)')).map(tr => {
-        const cells = Array.from(tr.querySelectorAll('th,td'));
-        return visibleColumns
-            .map(idx => `"${(cells[idx]?.textContent || '').replace(/"/g, '""')}"`)
-            .join(',');
-    }).join('\n');
-
-    if (isCopy) {
-        handleCopy(e.currentTarget, rows);
-    } else {
-        state.vscode.postMessage({ command: 'exportCSV', content: rows, obj: state.currentObject });
-    }
-}
-
-function exportJSON(e, isCopy) {
-    const table = dom.resultDiv.querySelector('table');
-    if (!table) {
-        return;
-    }
-
-    // Get visible headers and their indices
-    const headers = Array.from(table.querySelectorAll('thead tr:first-child th'));
-    const visibleColumns = headers.reduce((acc, th, index) => {
-        if (!th.classList.contains('hidden')) {
-            acc.push({ index, text: th.textContent });
-        }
-        return acc;
-    }, []);
-
-    // Map rows with only visible columns
-    const rows = Array.from(table.querySelectorAll('tbody tr:not(.hidden)')).map(tr => {
-        const cells = Array.from(tr.querySelectorAll('td'));
-        const obj = {};
-        visibleColumns.forEach(({ index, text }) => {
-            obj[text] = cells[index]?.textContent || '';
-        });
-        return obj;
-    });
-
-    if (isCopy) {
-        handleCopy(e.currentTarget, JSON.stringify(rows, null, 2));
-    } else {
-        state.vscode.postMessage({ command: 'exportJSON', content: rows, obj: state.currentObject });
-    }
-}
-

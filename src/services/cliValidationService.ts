@@ -1,4 +1,4 @@
-import { runCommand, showErrorWithActions } from './utils';
+import { runCommand, showErrorWithActions } from '../utils';
 
 export class CliValidationService {
     /**
